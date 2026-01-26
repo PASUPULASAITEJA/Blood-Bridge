@@ -215,20 +215,6 @@ Message: 🆘 EMERGENCY: O- blood needed URGENTLY at General Hospital! Contact J
 9. Login as User B → Confirm donation
 10. Check console → Thank you SMS sent to User A
 
----
-
-## 🎓 Viva Questions
-
-**Q: Why collect phone numbers?**
-> For SMS notifications via AWS SNS. Enables real-time alerts to donors, especially during emergencies.
-
-**Q: How does SMS work without AWS?**
-> Locally, SMS are printed to console. The code is AWS-ready - just uncomment boto3 lines.
-
-**Q: Why is phone important for emergencies?**
-> Donors can call immediately. In life-threatening situations, phone contact is faster than email.
-
----
 
 ## 📝 License
 
