@@ -1,0 +1,19 @@
+# BloodBridge - Python Dependencies
+# ==================================
+# Install: pip install -r requirements.txt
+
+# Core Framework
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# AWS SDK (for cloud deployment)
+# Uncomment when deploying to AWS
+# boto3==1.34.0
+
+# Production Server (for EC2 deployment)
+# Uncomment when deploying to production
+# gunicorn==21.2.0
+
+# Testing (optional)
+# pytest==7.4.0
+# pytest-flask==1.3.0

@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}BloodBridge - Save Lives, Donate Blood{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="relative bg-gradient-to-br from-red-600 via-red-700 to-red-800 text-white overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+        <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+                <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" stroke-width="0.5"/>
+                </pattern>
+            </defs>
+            <rect width="100" height="100" fill="url(#grid)"/>
+        </svg>
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+                    Every Drop <br>
+                    <span class="text-red-200">Saves a Life</span>
+                </h1>
+                <p class="text-xl text-red-100 mb-8 leading-relaxed">
+                    BloodBridge connects blood donors with patients in need. Join our community of lifesavers and make a difference today.
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    {% if session.get('user_id') %}
+                        <a href="{{ url_for('dashboard') }}" class="bg-white text-red-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-red-50 transition shadow-lg">
+                            Go to Dashboard
+                        </a>
+                        <a href="{{ url_for('create_request') }}" class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-red-600 transition">
+                            Request Blood
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('register') }}" class="bg-white text-red-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-red-50 transition shadow-lg pulse-red">
+                            Become a Donor
+                        </a>
+                        <a href="{{ url_for('login') }}" class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-red-600 transition">
+                            Login
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="hidden lg:flex justify-center">
+                <div class="relative">
+                    <!-- Blood Drop SVG -->
+                    <svg class="w-64 h-80 float" viewBox="0 0 100 130" fill="none">
+                        <defs>
+                            <linearGradient id="bloodGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#fca5a5"/>
+                                <stop offset="50%" style="stop-color:#ef4444"/>
+                                <stop offset="100%" style="stop-color:#991b1b"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M50 0 C50 0 0 60 0 85 C0 110 22 130 50 130 C78 130 100 110 100 85 C100 60 50 0 50 0Z" fill="url(#bloodGradient)"/>
+                        <ellipse cx="35" cy="70" rx="10" ry="15" fill="rgba(255,255,255,0.2)"/>
+                    </svg>
+                    
+                    <!-- Floating Stats -->
+                    <div class="absolute -right-4 top-10 bg-white text-gray-800 px-4 py-3 rounded-lg shadow-xl">
+                        <p class="text-2xl font-bold text-red-600">1000+</p>
+                        <p class="text-sm text-gray-500">Lives Saved</p>
+                    </div>
+                    <div class="absolute -left-4 bottom-20 bg-white text-gray-800 px-4 py-3 rounded-lg shadow-xl">
+                        <p class="text-2xl font-bold text-red-600">500+</p>
+                        <p class="text-sm text-gray-500">Active Donors</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Blood Groups Section -->
+<section class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">Blood Group Compatibility</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">Understanding blood compatibility is crucial for safe transfusions. Find out who you can help!</p>
+        </div>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {% for group in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}
+            <div class="bg-gradient-to-br from-red-50 to-white border border-red-100 rounded-xl p-6 text-center hover:shadow-lg transition transform hover:-translate-y-1">
+                <div class="w-16 h-16 mx-auto mb-4 blood-drop rounded-full flex items-center justify-center">
+                    <span class="text-white font-bold text-xl">{{ group }}</span>
+                </div>
+                <h3 class="font-semibold text-gray-800">Type {{ group }}</h3>
+                <p class="text-sm text-gray-500 mt-1">
+                    {% if group == 'O-' %}Universal Donor
+                    {% elif group == 'AB+' %}Universal Recipient
+                    {% elif group == 'O+' %}Most Common
+                    {% else %}Essential Type
+                    {% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-16 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">How BloodBridge Works</h2>
+            <p class="text-gray-600">Simple steps to save lives</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Step 1 -->
+            <div class="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="text-red-600 font-bold text-2xl">1</span>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">Register</h3>
+                <p class="text-gray-600">Create your account with your blood group information and join our donor community.</p>
+            </div>
+            
+            <!-- Step 2 -->
+            <div class="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="text-red-600 font-bold text-2xl">2</span>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">Connect</h3>
+                <p class="text-gray-600">View blood requests matching your type or create a request when you need blood.</p>
+            </div>
+            
+            <!-- Step 3 -->
+            <div class="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="text-red-600 font-bold text-2xl">3</span>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">Donate</h3>
+                <p class="text-gray-600">Respond to requests, donate blood, and help save precious lives in your community.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-16 bg-red-600 text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div>
+                <p class="text-4xl md:text-5xl font-bold mb-2">1M+</p>
+                <p class="text-red-200">Blood Units Donated</p>
+            </div>
+            <div>
+                <p class="text-4xl md:text-5xl font-bold mb-2">50K+</p>
+                <p class="text-red-200">Registered Donors</p>
+            </div>
+            <div>
+                <p class="text-4xl md:text-5xl font-bold mb-2">100+</p>
+                <p class="text-red-200">Partner Hospitals</p>
+            </div>
+            <div>
+                <p class="text-4xl md:text-5xl font-bold mb-2">24/7</p>
+                <p class="text-red-200">Emergency Support</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-16 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4">Ready to Make a Difference?</h2>
+        <p class="text-gray-600 mb-8 text-lg">Join thousands of donors who are already saving lives through BloodBridge.</p>
+        
+        {% if not session.get('user_id') %}
+        <a href="{{ url_for('register') }}" class="inline-block bg-red-600 text-white px-10 py-4 rounded-lg font-semibold text-lg hover:bg-red-700 transition shadow-lg">
+            Register Now - It's Free
+        </a>
+        {% else %}
+        <a href="{{ url_for('create_request') }}" class="inline-block bg-red-600 text-white px-10 py-4 rounded-lg font-semibold text-lg hover:bg-red-700 transition shadow-lg">
+            Create Blood Request
+        </a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

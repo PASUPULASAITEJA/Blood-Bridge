@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Blood Inventory - BloodBridge{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">🩸 Blood Inventory</h1>
+        <p class="text-gray-600 text-lg">Real-time blood stock levels at our blood bank</p>
+    </div>
+    
+    <!-- Legend -->
+    <div class="flex flex-wrap justify-center gap-4 mb-8">
+        <div class="flex items-center space-x-2">
+            <div class="w-4 h-4 rounded-full bg-red-500"></div>
+            <span class="text-sm text-gray-600">Critical (≤5 units)</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <div class="w-4 h-4 rounded-full bg-orange-500"></div>
+            <span class="text-sm text-gray-600">Low (6-15 units)</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
+            <span class="text-sm text-gray-600">Moderate (16-25 units)</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <div class="w-4 h-4 rounded-full bg-green-500"></div>
+            <span class="text-sm text-gray-600">Sufficient (>25 units)</span>
+        </div>
+    </div>
+    
+    <!-- Inventory Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        {% for blood_type, data in inventory.items() %}
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 transition duration-300">
+            <div class="p-6 text-center
+                {% if data.status == 'critical' %}bg-gradient-to-br from-red-500 to-red-700
+                {% elif data.status == 'low' %}bg-gradient-to-br from-orange-500 to-orange-700
+                {% elif data.status == 'moderate' %}bg-gradient-to-br from-yellow-500 to-yellow-600
+                {% else %}bg-gradient-to-br from-green-500 to-green-700{% endif %} text-white">
+                <div class="text-5xl font-bold mb-2">{{ blood_type }}</div>
+                <div class="text-sm opacity-80">Blood Type</div>
+            </div>
+            <div class="p-6 text-center">
+                <div class="text-4xl font-bold text-gray-800 mb-2">{{ data.units }}</div>
+                <div class="text-sm text-gray-500 mb-3">Units Available</div>
+                
+                <!-- Progress bar -->
+                <div class="w-full bg-gray-200 rounded-full h-3 mb-3">
+                    <div class="h-3 rounded-full
+                        {% if data.status == 'critical' %}bg-red-500
+                        {% elif data.status == 'low' %}bg-orange-500
+                        {% elif data.status == 'moderate' %}bg-yellow-500
+                        {% else %}bg-green-500{% endif %}" 
+                        style="width: {{ [data.units * 2, 100] | min }}%"></div>
+                </div>
+                
+                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold
+                    {% if data.status == 'critical' %}bg-red-100 text-red-800
+                    {% elif data.status == 'low' %}bg-orange-100 text-orange-800
+                    {% elif data.status == 'moderate' %}bg-yellow-100 text-yellow-800
+                    {% else %}bg-green-100 text-green-800{% endif %}">
+                    {{ data.status | upper }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Call to Action -->
+    <div class="mt-12 bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-8 text-center text-white">
+        <h2 class="text-2xl font-bold mb-4">Help Us Maintain Healthy Stock Levels!</h2>
+        <p class="text-red-100 mb-6">Your donation can save up to 3 lives. Schedule your donation today.</p>
+        <div class="flex flex-wrap justify-center gap-4">
+            <a href="{{ url_for('blood_camps_view') }}" class="bg-white text-red-600 px-8 py-3 rounded-lg font-semibold hover:bg-red-50 transition">
+                Find Donation Camp
+            </a>
+            <a href="{{ url_for('create_request') }}" class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-red-600 transition">
+                Request Blood
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

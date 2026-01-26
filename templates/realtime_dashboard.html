@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+
+{% block title %}Real-Time Dashboard - BloodBridge{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white mb-8">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-3xl font-bold flex items-center gap-3">
+                    <span class="relative flex h-4 w-4">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
+                    </span>
+                    Real-Time Dashboard
+                </h1>
+                <p class="text-blue-100 mt-1">Live updates every 3 seconds</p>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-blue-200">Last update</div>
+                <div id="lastUpdate" class="font-mono text-lg">--:--:--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Active Requests</p>
+                    <p id="activeRequests" class="text-3xl font-bold text-gray-800 transition-all">0</p>
+                </div>
+                <span class="text-3xl">🩸</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Online Donors</p>
+                    <p id="onlineDonors" class="text-3xl font-bold text-gray-800 transition-all">0</p>
+                </div>
+                <span class="text-3xl">👥</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Emergencies</p>
+                    <p id="criticalAlerts" class="text-3xl font-bold text-gray-800 transition-all">0</p>
+                </div>
+                <span class="text-3xl animate-pulse">🚨</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Today's Donations</p>
+                    <p id="donationsToday" class="text-3xl font-bold text-gray-800 transition-all">0</p>
+                </div>
+                <span class="text-3xl">💉</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Blood Inventory -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                    </span>
+                    Live Blood Inventory
+                </h2>
+            </div>
+            <div class="p-6">
+                <div id="inventoryGrid" class="grid grid-cols-4 gap-4">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-700 px-6 py-4">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="animate-pulse">📡</span>
+                    Live Activity
+                </h2>
+            </div>
+            <div id="activityFeed" class="divide-y max-h-80 overflow-y-auto">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Map -->
+    <div class="mt-8 bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-green-600 to-teal-700 px-6 py-4 flex items-center justify-between">
+            <h2 class="text-xl font-bold text-white">🗺️ Live Request Map</h2>
+            <div class="flex gap-4 text-white text-sm">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span> Critical</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-orange-500 rounded-full"></span> High</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-yellow-500 rounded-full"></span> Medium</span>
+            </div>
+        </div>
+        <div class="p-6">
+            <div id="liveMap" class="relative h-64 bg-gradient-to-br from-blue-50 to-green-50 rounded-xl overflow-hidden border-2 border-gray-200">
+                <!-- Grid -->
+                <svg class="absolute inset-0 w-full h-full opacity-20">
+                    <defs>
+                        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="gray" stroke-width="0.5"/>
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" />
+                </svg>
+                
+                <!-- Center (You) -->
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg ring-4 ring-blue-200">
+                        You
+                    </div>
+                </div>
+                
+                <div id="mapMarkers"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blood Fact -->
+    <div class="mt-8 bg-gradient-to-r from-red-500 to-pink-600 rounded-xl p-6 text-white text-center">
+        <p class="text-sm opacity-80 mb-2">💡 Did You Know?</p>
+        <p id="bloodFact" class="text-xl font-semibold">Loading...</p>
+    </div>
+</div>
+
+<script>
+const UPDATE_INTERVAL = 3000;
+
+document.addEventListener('DOMContentLoaded', function() {
+    fetchData();
+    fetchFact();
+    setInterval(fetchData, UPDATE_INTERVAL);
+    setInterval(fetchFact, 30000);
+    setInterval(updateClock, 1000);
+});
+
+function updateClock() {
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+}
+
+async function fetchData() {
+    try {
+        const response = await fetch('/api/realtime-data');
+        const data = await response.json();
+        
+        updateStats(data.stats);
+        updateInventory(data.inventory);
+        updateActivity(data.activities);
+        updateMap(data.requests);
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function fetchFact() {
+    try {
+        const response = await fetch('/api/blood-facts');
+        const data = await response.json();
+        document.getElementById('bloodFact').textContent = data.fact;
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function updateStats(stats) {
+    animateNum('activeRequests', stats.active_requests || 0);
+    animateNum('onlineDonors', stats.online_donors || 0);
+    animateNum('criticalAlerts', stats.critical_alerts || 0);
+    animateNum('donationsToday', stats.donations_today || 0);
+}
+
+function animateNum(id, value) {
+    const el = document.getElementById(id);
+    if (parseInt(el.textContent) !== value) {
+        el.classList.add('scale-110', 'text-green-600');
+        el.textContent = value;
+        setTimeout(() => el.classList.remove('scale-110', 'text-green-600'), 300);
+    }
+}
+
+function updateInventory(inventory) {
+    const grid = document.getElementById('inventoryGrid');
+    const types = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    const colors = {
+        'critical': 'from-red-500 to-red-700',
+        'low': 'from-orange-500 to-orange-700',
+        'moderate': 'from-yellow-500 to-yellow-600',
+        'sufficient': 'from-green-500 to-green-700'
+    };
+    
+    grid.innerHTML = types.map(type => {
+        const data = inventory[type] || { units: 0, status: 'critical' };
+        return `
+            <div class="bg-gradient-to-br ${colors[data.status]} rounded-xl p-4 text-white text-center transform hover:scale-105 transition">
+                <div class="text-xl font-bold">${type}</div>
+                <div class="text-2xl font-bold mt-1">${data.units}</div>
+                <div class="text-xs opacity-80">units</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateActivity(activities) {
+    const feed = document.getElementById('activityFeed');
+    
+    if (!activities || !activities.length) {
+        feed.innerHTML = '<div class="p-4 text-center text-gray-500">No recent activity</div>';
+        return;
+    }
+    
+    feed.innerHTML = activities.map(a => `
+        <div class="p-4 hover:bg-gray-50 flex items-start gap-3 ${a.isNew ? 'bg-yellow-50' : ''}">
+            <span class="text-2xl">${a.icon}</span>
+            <div>
+                <p class="text-sm text-gray-800">${a.message}</p>
+                <p class="text-xs text-gray-500">${timeAgo(a.timestamp)}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateMap(requests) {
+    const markers = document.getElementById('mapMarkers');
+    if (!requests) return;
+    
+    const pending = requests.filter(r => r.status === 'pending');
+    const colors = {
+        'critical': 'bg-red-500',
+        'high': 'bg-orange-500',
+        'medium': 'bg-yellow-500',
+        'low': 'bg-green-400'
+    };
+    
+    markers.innerHTML = pending.map((req, i) => {
+        const x = 10 + (i * 17) % 80;
+        const y = 10 + ((i * 29) % 70);
+        const isAnimated = req.urgency === 'critical' ? 'animate-ping' : '';
+        return `
+            <div class="absolute group" style="left:${x}%;top:${y}%;">
+                <div class="relative">
+                    <div class="w-4 h-4 ${colors[req.urgency]} ${isAnimated} rounded-full absolute"></div>
+                    <div class="w-4 h-4 ${colors[req.urgency]} rounded-full relative"></div>
+                </div>
+                <div class="hidden group-hover:block absolute bottom-6 left-1/2 -translate-x-1/2 bg-white shadow-xl rounded-lg p-3 w-40 z-20 border">
+                    <p class="font-bold text-gray-800">${req.blood_group} Needed</p>
+                    <p class="text-sm text-gray-600">${req.location}</p>
+                    <p class="text-xs text-red-600 font-semibold uppercase">${req.urgency}</p>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function timeAgo(timestamp) {
+    if (!timestamp) return 'Just now';
+    const diff = Math.floor((new Date() - new Date(timestamp)) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+    return new Date(timestamp).toLocaleDateString();
+}
+</script>
+{% endblock %}

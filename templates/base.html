@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BloodBridge{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+        }
+        .pulse-red { animation: pulse-red 2s infinite; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .float { animation: float 3s ease-in-out infinite; }
+        
+        .blood-drop {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <a href="{{ url_for('index') }}" class="flex items-center space-x-2">
+                        <div class="w-10 h-10 blood-drop rounded-full flex items-center justify-center text-white font-bold text-lg">
+                            B
+                        </div>
+                        <span class="text-xl font-bold text-gray-800">Blood<span class="text-red-600">Bridge</span></span>
+                    </a>
+                </div>
+                
+                <!-- Navigation Links -->
+                <div class="flex items-center space-x-4">
+                    {% if session.get('user_id') %}
+                        <a href="{{ url_for('dashboard') }}" class="text-gray-600 hover:text-red-600 px-3 py-2 rounded-md text-sm font-medium transition">
+                            Dashboard
+                        </a>
+                        <a href="{{ url_for('create_request') }}" class="text-gray-600 hover:text-red-600 px-3 py-2 rounded-md text-sm font-medium transition">
+                            New Request
+                        </a>
+                        
+                        <!-- Features Dropdown -->
+                        <div class="relative group">
+                            <button class="text-gray-600 hover:text-red-600 px-3 py-2 rounded-md text-sm font-medium transition flex items-center">
+                                ✨ Features
+                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div class="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border">
+                                <div class="py-2">
+                                    <a href="{{ url_for('realtime_dashboard') }}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-semibold">
+                                        ⚡ Real-Time Dashboard
+                                    </a>
+                                    <a href="{{ url_for('blood_inventory_view') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600">
+                                        📊 Blood Inventory
+                                    </a>
+                                    <a href="{{ url_for('blood_camps_view') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600">
+                                        🏕️ Blood Camps
+                                    </a>
+                                    <a href="{{ url_for('emergency_list') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600">
+                                        🚨 Emergencies
+                                    </a>
+                                    <a href="{{ url_for('leaderboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600">
+                                        🏆 Leaderboard
+                                    </a>
+                                    <div class="border-t my-1"></div>
+                                    <a href="{{ url_for('sos_emergency') }}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-semibold">
+                                        🆘 SOS Emergency
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3 ml-4 pl-4 border-l">
+                            <a href="{{ url_for('profile') }}" class="flex items-center space-x-2 text-gray-600 hover:text-red-600">
+                                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                    <span class="text-red-600 font-semibold text-sm">{{ session.get('user_name', 'U')[0] }}</span>
+                                </div>
+                                <span class="text-sm font-medium">{{ session.get('user_name', 'User') }}</span>
+                            </a>
+                            <span class="bg-red-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                                {{ session.get('blood_group', '') }}
+                            </span>
+                            <a href="{{ url_for('logout') }}" class="text-gray-400 hover:text-red-600 transition" title="Logout">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="text-gray-600 hover:text-red-600 px-3 py-2 rounded-md text-sm font-medium transition">
+                            Login
+                        </a>
+                        <a href="{{ url_for('register') }}" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition">
+                            Register
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+                {% for category, message in messages %}
+                    <div class="mb-2 p-4 rounded-lg flex items-center justify-between
+                        {% if category == 'success' %}bg-green-100 text-green-800 border border-green-200
+                        {% elif category == 'danger' %}bg-red-100 text-red-800 border border-red-200
+                        {% elif category == 'warning' %}bg-yellow-100 text-yellow-800 border border-yellow-200
+                        {% else %}bg-blue-100 text-blue-800 border border-blue-200{% endif %}">
+                        <span>{{ message }}</span>
+                        <button onclick="this.parentElement.remove()" class="ml-4 text-lg font-bold hover:opacity-70">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Main Content -->
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <div class="w-10 h-10 blood-drop rounded-full flex items-center justify-center text-white font-bold">B</div>
+                        <span class="text-xl font-bold">BloodBridge</span>
+                    </div>
+                    <p class="text-gray-400 text-sm">Connecting donors with those in need. Every drop counts.</p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Quick Links</h4>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="{{ url_for('index') }}" class="hover:text-white transition">Home</a></li>
+                        {% if session.get('user_id') %}
+                            <li><a href="{{ url_for('dashboard') }}" class="hover:text-white transition">Dashboard</a></li>
+                            <li><a href="{{ url_for('realtime_dashboard') }}" class="hover:text-white transition">Real-Time Dashboard</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Emergency</h4>
+                    <p class="text-gray-400 text-sm">24/7 Blood Bank Helpline</p>
+                    <p class="text-red-400 font-bold text-lg">1-800-BLOOD-HELP</p>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm">
+                <p>&copy; 2024 BloodBridge. Made with ❤️ for saving lives</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

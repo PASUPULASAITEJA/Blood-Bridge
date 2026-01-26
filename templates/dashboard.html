@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - BloodBridge{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Welcome Header -->
+    <div class="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-8 text-white mb-8">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Welcome, {{ session.get('user_name', 'Donor') }}!</h1>
+                <p class="text-red-100">
+                    Blood group: <span class="bg-white text-red-600 px-3 py-1 rounded-full font-bold">{{ user_blood_group }}</span>
+                    <span class="ml-3">📱 {{ session.get('user_phone', 'No phone') }}</span>
+                </p>
+            </div>
+            <div class="mt-4 md:mt-0 flex flex-wrap gap-3">
+                <a href="{{ url_for('create_request') }}" class="bg-white text-red-600 px-6 py-3 rounded-lg font-semibold hover:bg-red-50 transition">
+                    + New Request
+                </a>
+                <a href="{{ url_for('sos_emergency') }}" class="bg-red-800 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-900 transition flex items-center">
+                    🆘 SOS Emergency
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-xl p-6 shadow-md border-l-4 border-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Matching Requests</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ matching_requests|length }}</p>
+                </div>
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">🩸</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 shadow-md border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">My Requests</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ my_requests|length }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">📋</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 shadow-md border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">My Donations</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ my_donations|length }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">💚</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 shadow-md border-l-4 border-yellow-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Lives Saved</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ my_donations|length * 3 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">❤️</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Matching Blood Requests -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="bg-red-50 px-6 py-4 border-b border-red-100">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                    <span class="text-2xl mr-2">🩸</span>
+                    Requests You Can Help
+                </h2>
+                <p class="text-sm text-gray-600 mt-1">Compatible with your blood type ({{ user_blood_group }})</p>
+            </div>
+            
+            <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                {% if matching_requests %}
+                    {% for req in matching_requests %}
+                    <div class="p-6 hover:bg-gray-50 transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full
+                                        {% if req.urgency == 'critical' %}bg-red-100 text-red-800
+                                        {% elif req.urgency == 'high' %}bg-orange-100 text-orange-800
+                                        {% elif req.urgency == 'medium' %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ req.urgency|upper }}
+                                    </span>
+                                    <span class="inline-block px-3 py-1 text-sm font-semibold bg-red-600 text-white rounded-full">
+                                        {{ req.blood_group }}
+                                    </span>
+                                </div>
+                                <p class="font-medium text-gray-800">{{ req.requester_name }}</p>
+                                <p class="text-sm text-gray-500 flex items-center mt-1">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    </svg>
+                                    {{ req.location }}
+                                </p>
+                                {% if req.requester_phone %}
+                                <p class="text-sm text-green-600 flex items-center mt-1 font-medium">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                    </svg>
+                                    {{ req.requester_phone }}
+                                </p>
+                                {% endif %}
+                                <p class="text-sm text-gray-500 mt-1">{{ req.quantity }} unit(s) needed</p>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <form method="POST" action="{{ url_for('respond_to_request', request_id=req.request_id) }}">
+                                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition">
+                                        Donate
+                                    </button>
+                                </form>
+                                {% if req.requester_phone %}
+                                <a href="tel:{{ req.requester_phone }}" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition text-center">
+                                    📞 Call
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="p-8 text-center">
+                        <div class="text-5xl mb-4">✅</div>
+                        <p class="text-gray-500">No matching blood requests at the moment.</p>
+                        <p class="text-sm text-gray-400 mt-1">Check back later for donation opportunities.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- My Requests -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="bg-blue-50 px-6 py-4 border-b border-blue-100">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                    <span class="text-2xl mr-2">📋</span>
+                    My Blood Requests
+                </h2>
+                <p class="text-sm text-gray-600 mt-1">Track your blood request status</p>
+            </div>
+            
+            <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                {% if my_requests %}
+                    {% for req in my_requests %}
+                    <div class="p-6 hover:bg-gray-50 transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full
+                                        {% if req.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                        {% elif req.status == 'accepted' %}bg-blue-100 text-blue-800
+                                        {% elif req.status == 'donated' %}bg-green-100 text-green-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ req.status|upper }}
+                                    </span>
+                                    <span class="inline-block px-3 py-1 text-sm font-semibold bg-red-600 text-white rounded-full">
+                                        {{ req.blood_group }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    </svg>
+                                    {{ req.location }}
+                                </p>
+                                <p class="text-sm text-gray-500 mt-1">{{ req.quantity }} unit(s) • {{ req.urgency|capitalize }} urgency</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                {% if req.status == 'accepted' %}
+                                <form method="POST" action="{{ url_for('confirm_donation', request_id=req.request_id) }}">
+                                    <button type="submit" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition">
+                                        ✓ Confirm
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if req.status in ['pending', 'accepted'] %}
+                                <form method="POST" action="{{ url_for('cancel_request', request_id=req.request_id) }}">
+                                    <button type="submit" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300 transition">
+                                        Cancel
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="p-8 text-center">
+                        <div class="text-5xl mb-4">📝</div>
+                        <p class="text-gray-500">You haven't made any blood requests yet.</p>
+                        <a href="{{ url_for('create_request') }}" class="text-red-600 hover:underline text-sm mt-1 inline-block">Create your first request</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- My Donations Section -->
+    {% if my_donations %}
+    <div class="mt-8 bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="bg-green-50 px-6 py-4 border-b border-green-100">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                <span class="text-2xl mr-2">💚</span>
+                My Donation History
+            </h2>
+            <p class="text-sm text-gray-600 mt-1">You've helped save {{ my_donations|length * 3 }} lives!</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood Group</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for donation in my_donations %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <span class="inline-block px-3 py-1 text-sm font-semibold bg-red-600 text-white rounded-full">
+                                {{ donation.blood_group }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">{{ donation.location }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">{{ donation.quantity }} unit(s)</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full
+                                {% if donation.status == 'donated' %}bg-green-100 text-green-800
+                                {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ donation.status|upper }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Quick Links -->
+    <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <a href="{{ url_for('realtime_dashboard') }}" class="bg-blue-50 hover:bg-blue-100 rounded-xl p-4 text-center transition">
+            <span class="text-2xl">⚡</span>
+            <p class="text-sm font-medium text-gray-800 mt-2">Real-Time Dashboard</p>
+        </a>
+        <a href="{{ url_for('blood_inventory_view') }}" class="bg-red-50 hover:bg-red-100 rounded-xl p-4 text-center transition">
+            <span class="text-2xl">📊</span>
+            <p class="text-sm font-medium text-gray-800 mt-2">Blood Inventory</p>
+        </a>
+        <a href="{{ url_for('blood_camps_view') }}" class="bg-green-50 hover:bg-green-100 rounded-xl p-4 text-center transition">
+            <span class="text-2xl">🏕️</span>
+            <p class="text-sm font-medium text-gray-800 mt-2">Blood Camps</p>
+        </a>
+        <a href="{{ url_for('leaderboard') }}" class="bg-yellow-50 hover:bg-yellow-100 rounded-xl p-4 text-center transition">
+            <span class="text-2xl">🏆</span>
+            <p class="text-sm font-medium text-gray-800 mt-2">Leaderboard</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

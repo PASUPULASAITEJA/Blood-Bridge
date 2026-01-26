@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}All Blood Requests - BloodBridge{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">All Blood Requests</h1>
+            <p class="text-gray-600">Browse all blood requests in the system</p>
+        </div>
+        <div class="mt-4 md:mt-0">
+            <a href="{{ url_for('create_request') }}" class="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition inline-flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                New Request
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filters (Visual Only) -->
+    <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+        <div class="flex flex-wrap items-center gap-4">
+            <span class="text-sm text-gray-500">Filter by:</span>
+            <button class="px-4 py-2 rounded-full bg-red-600 text-white text-sm font-medium">All</button>
+            <button class="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 transition">Pending</button>
+            <button class="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 transition">Critical</button>
+            <button class="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 transition">My Blood Type</button>
+        </div>
+    </div>
+    
+    <!-- Requests Grid -->
+    {% if requests %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for req in requests %}
+        <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition transform hover:-translate-y-1">
+            <!-- Card Header -->
+            <div class="p-4 border-b border-gray-100
+                {% if req.urgency == 'critical' %}bg-red-50
+                {% elif req.urgency == 'high' %}bg-orange-50
+                {% elif req.urgency == 'medium' %}bg-yellow-50
+                {% else %}bg-green-50{% endif %}">
+                <div class="flex items-center justify-between">
+                    <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full
+                        {% if req.urgency == 'critical' %}bg-red-100 text-red-800
+                        {% elif req.urgency == 'high' %}bg-orange-100 text-orange-800
+                        {% elif req.urgency == 'medium' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-green-100 text-green-800{% endif %}">
+                        {{ req.urgency|upper }}
+                    </span>
+                    <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full
+                        {% if req.status == 'pending' %}bg-yellow-100 text-yellow-800
+                        {% elif req.status == 'accepted' %}bg-blue-100 text-blue-800
+                        {% elif req.status == 'donated' %}bg-green-100 text-green-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ req.status|upper }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Card Body -->
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-16 h-16 blood-drop rounded-full flex items-center justify-center">
+                        <span class="text-white font-bold text-xl">{{ req.blood_group }}</span>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold text-gray-800">{{ req.quantity }}</p>
+                        <p class="text-sm text-gray-500">unit(s)</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <p class="font-medium text-gray-800">{{ req.requester_name }}</p>
+                    <p class="text-sm text-gray-500 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        {{ req.location }}
+                    </p>
+                    <p class="text-xs text-gray-400">
+                        {{ req.created_at[:10] if req.created_at else 'N/A' }}
+                    </p>
+                </div>
+                
+                {% if req.notes %}
+                <p class="text-sm text-gray-500 mt-3 italic border-t pt-3">"{{ req.notes }}"</p>
+                {% endif %}
+            </div>
+            
+            <!-- Card Footer -->
+            {% if req.status == 'pending' and req.requester_id != session.get('user_id') %}
+            <div class="px-6 pb-6">
+                <form method="POST" action="{{ url_for('respond_to_request', request_id=req.request_id) }}">
+                    <button type="submit" class="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition">
+                        Offer to Donate
+                    </button>
+                </form>
+            </div>
+            {% elif req.status == 'donated' %}
+            <div class="px-6 pb-6">
+                <div class="w-full bg-green-100 text-green-800 py-3 rounded-lg font-semibold text-center">
+                    ✓ Donation Complete
+                </div>
+            </div>
+            {% elif req.requester_id == session.get('user_id') %}
+            <div class="px-6 pb-6">
+                <div class="w-full bg-blue-100 text-blue-800 py-3 rounded-lg font-semibold text-center">
+                    Your Request
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-md p-12 text-center">
+        <svg class="w-24 h-24 text-gray-300 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">No Blood Requests Yet</h3>
+        <p class="text-gray-500 mb-6">Be the first to create a blood request or check back later.</p>
+        <a href="{{ url_for('create_request') }}" class="inline-block bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition">
+            Create First Request
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

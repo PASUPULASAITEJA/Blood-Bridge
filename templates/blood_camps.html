@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Blood Donation Camps - BloodBridge{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl p-8 text-white mb-8">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">🏕️ Blood Donation Camps</h1>
+                <p class="text-purple-100">Find and register for upcoming blood donation events in your area</p>
+            </div>
+            <div class="mt-4 md:mt-0">
+                <span class="bg-white/20 px-4 py-2 rounded-lg text-sm">
+                    {{ camps | length }} Upcoming Events
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Camps List -->
+    <div class="space-y-6">
+        {% for camp in camps %}
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition">
+            <div class="flex flex-col lg:flex-row">
+                <!-- Date Badge -->
+                <div class="lg:w-48 bg-gradient-to-br from-red-500 to-red-700 text-white p-6 flex flex-col items-center justify-center">
+                    {% set date_parts = camp.date.split('-') %}
+                    <div class="text-4xl font-bold">{{ date_parts[2] }}</div>
+                    <div class="text-lg">
+                        {% set months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+                        {{ months[date_parts[1]|int - 1] }} {{ date_parts[0] }}
+                    </div>
+                    <div class="text-sm opacity-80 mt-2">{{ camp.time }}</div>
+                </div>
+                
+                <!-- Camp Details -->
+                <div class="flex-1 p-6">
+                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">{{ camp.name }}</h3>
+                            <div class="space-y-2 text-gray-600">
+                                <p class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    {{ camp.location }}
+                                </p>
+                                <p class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                    </svg>
+                                    Organized by: {{ camp.organizer }}
+                                </p>
+                            </div>
+                            
+                            <!-- Capacity Bar -->
+                            <div class="mt-4">
+                                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                    <span>{{ camp.registered }} registered</span>
+                                    <span>{{ camp.capacity }} capacity</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all duration-500" 
+                                         style="width: {{ (camp.registered / camp.capacity * 100) | round }}%"></div>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">
+                                    {{ camp.capacity - camp.registered }} spots remaining
+                                </p>
+                            </div>
+                        </div>                       
+                        <!-- Action Button -->
+                        <div class="mt-6 lg:mt-0 lg:ml-6">
+                            {% if camp.camp_id in user_registrations %}
+                                <div class="bg-green-100 text-green-800 px-6 py-3 rounded-lg font-semibold text-center">
+                                    ✓ Registered
+                                </div>
+                            {% elif camp.registered >= camp.capacity %}
+                                <div class="bg-gray-100 text-gray-500 px-6 py-3 rounded-lg font-semibold text-center">
+                                    Fully Booked
+                                </div>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('register_for_camp', camp_id=camp.camp_id) }}">
+                                    <button type="submit" class="bg-red-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-red-700 transition w-full">
+                                        Register Now
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if not camps %}
+    <div class="bg-white rounded-xl shadow-md p-12 text-center">
+        <div class="text-6xl mb-4">🏕️</div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">No Upcoming Camps</h3>
+        <p class="text-gray-500">Check back later for new blood donation events.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "BloodBridgeDynamoDBAccess",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:BatchGetItem",
+                "dynamodb:BatchWriteItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:*:*:table/bloodbridge_users",
+                "arn:aws:dynamodb:*:*:table/bloodbridge_users/index/*",
+                "arn:aws:dynamodb:*:*:table/bloodbridge_requests",
+                "arn:aws:dynamodb:*:*:table/bloodbridge_requests/index/*",
+                "arn:aws:dynamodb:*:*:table/bloodbridge_inventory"
+            ]
+        },
+        {
+            "Sid": "BloodBridgeSNSAccess",
+            "Effect": "Allow",
+            "Action": [
+                "sns:Publish",
+                "sns:Subscribe",
+                "sns:Unsubscribe",
+                "sns:ListSubscriptionsByTopic"
+            ],
+            "Resource": [
+                "arn:aws:sns:*:*:bloodbridge-alerts",
+                "arn:aws:sns:*:*:bloodbridge-emergency"
+            ]
+        },
+        {
+            "Sid": "BloodBridgeSNSDirectSMS",
+            "Effect": "Allow",
+            "Action": [
+                "sns:Publish"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "sns:Protocol": "sms"
+                }
+            }
+        }
+    ]
+}
