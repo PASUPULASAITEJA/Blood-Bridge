@@ -6,36 +6,37 @@ A Flask-based web application for managing blood donations with real-time featur
 
 ---
 
-## 📋 Features
+## 🚀 Quick Start (Local Deployment)
 
-### Core Features
-- ✅ User Registration with **Phone Number**
-- ✅ Secure Login/Logout with Flask Sessions
-- ✅ Dashboard with Compatible Blood Requests
-- ✅ Create & Manage Blood Requests
-- ✅ Donor Response & Confirmation System
-- ✅ Blood Group Compatibility Matching
+### Step 1: Install Python
+Download from https://python.org (version 3.8+)
 
-### Unique Features
-- ⚡ **Real-Time Dashboard** - Live stats, inventory, activity feed
-- 🆘 **SOS Emergency Mode** - One-tap emergency with SMS broadcast
-- 📱 **SMS Notifications** - Alert donors via phone (AWS SNS ready)
-- 📊 **Blood Inventory** - Live stock levels
-- 🏕️ **Blood Camps** - Event registration
-- 🏆 **Leaderboard** - Gamified donor rankings
-- 📞 **Click-to-Call** - Direct phone contact for emergencies
+### Step 2: Open Terminal
+```bash
+cd path/to/bloodbridge
+```
 
----
+### Step 3: Run Setup
+```bash
+python setup.py
+```
 
-## 🛠 Technology Stack
+### Step 4: Start Application
+```bash
+python app.py
+```
 
-| Component | Technology |
-|-----------|------------|
-| Backend | Python Flask |
-| Frontend | HTML, CSS (Tailwind), Jinja2 |
-| Database | Python lists/dicts (local) → DynamoDB (AWS) |
-| SMS | Console logs (local) → AWS SNS (cloud) |
-| Auth | Flask Sessions |
+### Step 5: Open Browser
+```
+http://127.0.0.1:5000
+```
+
+### Step 6: Login
+| Field | Value |
+|-------|-------|
+| Email | john@demo.com |
+| Password | demo123 |
+| Phone | +91-98765-43210 |
 
 ---
 
@@ -46,27 +47,30 @@ bloodbridge/
 ├── app.py                    # Main Flask application
 ├── config.py                 # Configuration settings
 ├── requirements.txt          # Dependencies
+├── setup.py                  # Setup script
+├── run.py                    # Production run script
 ├── README.md                 # This file
+├── DEPLOYMENT_GUIDE.md       # Full deployment guide
 ├── DEVELOPMENT_GUIDE.md      # Academic development guide
 │
-├── templates/
+├── templates/                # HTML Templates
 │   ├── base.html             # Base template
 │   ├── index.html            # Landing page
 │   ├── login.html            # Login
-│   ├── register.html         # Registration (with phone)
-│   ├── dashboard.html        # User dashboard
-│   ├── create_request.html   # Create request (with phone)
+│   ├── register.html         # Registration
+│   ├── dashboard.html        # Dashboard
+│   ├── create_request.html   # Create request
 │   ├── all_requests.html     # All requests
-│   ├── profile.html          # Profile (shows phone)
+│   ├── profile.html          # Profile
 │   ├── realtime_dashboard.html # Real-time dashboard
 │   ├── blood_inventory.html  # Inventory
 │   ├── blood_camps.html      # Camps
-│   ├── sos_emergency.html    # SOS (with phone)
-│   ├── emergency_list.html   # Emergencies (call button)
-│   ├── leaderboard.html      # Rankings
+│   ├── sos_emergency.html    # SOS
+│   ├── emergency_list.html   # Emergencies
+│   ├── leaderboard.html      # Leaderboard
 │   └── error.html            # Errors
 │
-└── aws/
+└── aws/                      # AWS Integration
     ├── dynamodb_setup.py     # DynamoDB tables
     ├── dynamodb_helper.py    # DynamoDB CRUD
     ├── sns_setup.py          # SNS topics
@@ -76,93 +80,85 @@ bloodbridge/
 
 ---
 
-## 🚀 Quick Start
+## ✨ Features
 
-### 1. Install Dependencies
-```bash
-pip install flask werkzeug
-```
+### Core Features
+- ✅ User Registration with Phone Number
+- ✅ Secure Login/Logout
+- ✅ Password Hashing
+- ✅ Blood Group Compatibility Matching
+- ✅ Create Blood Requests
+- ✅ Respond to Requests
+- ✅ Confirm Donations
 
-### 2. Run Application
-```bash
-python app.py
-```
-
-### 3. Open Browser
-```
-http://127.0.0.1:5000
-```
-
-### 4. Demo Login
-| Field | Value |
-|-------|-------|
-| Email | john@demo.com |
-| Password | demo123 |
-| Phone | +91-98765-43210 |
+### Unique Features
+- ⚡ **Real-Time Dashboard** - Live stats, inventory, activity feed
+- 🆘 **SOS Emergency** - One-tap emergency with SMS broadcast
+- 📱 **SMS Notifications** - Alert donors via phone
+- 📊 **Blood Inventory** - Live stock levels
+- 🏕️ **Blood Camps** - Event registration
+- 🏆 **Leaderboard** - Gamified donor rankings
+- 📞 **Click-to-Call** - Direct phone contact
 
 ---
 
-## 📱 Phone Number Features
+## 📱 SMS Notification Points
 
-### Registration
-- Phone number required during signup
-- Validates 10-15 digit formats
-- Stored for SMS notifications
-
-### Blood Requests
-- Contact phone included with each request
-- Donors can see requester's phone
-- Click-to-call button for quick contact
-
-### SOS Emergency
-- Phone number prominently displayed
-- All compatible donors receive SMS with contact
-- Direct call button in emergency list
-
-### SMS Notifications (When AWS Connected)
-```
-📱 Scenarios that trigger SMS:
-1. New user registration → Welcome SMS
-2. Blood request created → Notify compatible donors
-3. Donor responds → Notify requester
-4. Donation confirmed → Thank you SMS
-5. SOS Emergency → Broadcast to all compatible donors
-```
+| Event | SMS Sent To |
+|-------|-------------|
+| New Request | All compatible donors |
+| Donor Responds | Requester |
+| Donation Confirmed | Donor (thank you) |
+| SOS Emergency | ALL compatible donors |
+| Camp Registration | Registered user |
 
 ---
 
 ## 🩸 Blood Compatibility
 
-| Type | Can Donate To | Can Receive From |
-|------|---------------|------------------|
-| O-   | All ✅ | O- only |
-| O+   | O+, A+, B+, AB+ | O-, O+ |
-| A-   | A+, A-, AB+, AB- | O-, A- |
-| A+   | A+, AB+ | O-, O+, A-, A+ |
-| B-   | B+, B-, AB+, AB- | O-, B- |
-| B+   | B+, AB+ | O-, O+, B-, B+ |
-| AB-  | AB+, AB- | O-, A-, B-, AB- |
-| AB+  | AB+ only | All ✅ |
+| Donor | Can Donate To |
+|-------|---------------|
+| O- | All (Universal) |
+| O+ | O+, A+, B+, AB+ |
+| A- | A-, A+, AB-, AB+ |
+| A+ | A+, AB+ |
+| B- | B-, B+, AB-, AB+ |
+| B+ | B+, AB+ |
+| AB- | AB-, AB+ |
+| AB+ | AB+ only |
 
 ---
 
-## ☁️ AWS Integration (Future)
+## 🧪 Testing
 
-### Local → AWS Migration
+### Test Flow
+1. Register User A (O+ blood)
+2. Register User B (A+ blood)
+3. Login as User B → Create A+ request
+4. See SMS in terminal
+5. Login as User A → See request → Click Donate
+6. Login as User B → Click Confirm
+7. Check Profile → See stats
 
-| Local (Current) | AWS (Future) |
-|-----------------|--------------|
-| Python lists | DynamoDB tables |
-| print() logs | AWS SNS SMS |
-| localhost | EC2 instance |
-| Flask sessions | Cognito (optional) |
+### Demo Users
+| Name | Email | Password | Phone | Blood |
+|------|-------|----------|-------|-------|
+| John Smith | john@demo.com | demo123 | +91-98765-43210 | O+ |
+| Sarah Johnson | sarah@demo.com | demo123 | +91-98765-43211 | A+ |
+| Mike Wilson | mike@demo.com | demo123 | +91-98765-43212 | B+ |
 
-### Deploy to AWS
+---
+
+## ☁️ AWS Deployment
+
+See `DEPLOYMENT_GUIDE.md` for full instructions.
+
+### Quick Steps:
 ```bash
 # 1. Install boto3
 pip install boto3
 
-# 2. Configure AWS CLI
+# 2. Configure AWS
 aws configure
 
 # 3. Create DynamoDB tables
@@ -172,49 +168,46 @@ python aws/dynamodb_setup.py
 python aws/sns_setup.py
 
 # 5. Deploy to EC2
-# See DEVELOPMENT_GUIDE.md
+# See DEPLOYMENT_GUIDE.md
 ```
 
 ---
 
-## 📞 SMS Examples (Console Output)
+## 📚 Documentation
 
-When running locally, SMS are printed to console:
-
-```
-==================================================
-📱 SMS NOTIFICATION
-==================================================
-To: +919876543210
-Message: 🩸 A+ blood needed at City Hospital. Contact: +919876543211. Open BloodBridge to respond.
-==================================================
-```
-
-```
-==================================================
-📱 SMS NOTIFICATION
-==================================================
-To: +919876543210
-Message: 🆘 EMERGENCY: O- blood needed URGENTLY at General Hospital! Contact John: +919876543211. Please help!
-==================================================
-```
+| File | Description |
+|------|-------------|
+| README.md | Quick start guide |
+| DEPLOYMENT_GUIDE.md | Full deployment steps |
+| DEVELOPMENT_GUIDE.md | Academic guide with viva Q&A |
 
 ---
 
-## 🧪 Testing
+## 🔧 Troubleshooting
 
-### Test Flow
-1. Register User A (O+ blood, with phone)
-2. Register User B (A+ blood, with phone)
-3. Login as User B → Create blood request for A+
-4. Check console → SMS sent to User A (compatible donor)
-5. Login as User A → See request on dashboard
-6. Click "Call" to contact User B directly
-7. Click "Donate" to respond
-8. Check console → SMS sent to User B (donor found!)
-9. Login as User B → Confirm donation
-10. Check console → Thank you SMS sent to User A
+| Issue | Solution |
+|-------|----------|
+| `python not found` | Use `python3` |
+| `pip not found` | Use `pip3` |
+| `ModuleNotFoundError: flask` | Run `pip install flask` |
+| `Address already in use` | Kill process on port 5000 |
+| `TemplateNotFound` | Check templates folder |
 
+---
+
+## 👨‍💻 For Viva
+
+Key points to explain:
+1. **Flask Sessions** - How user authentication works
+2. **Password Hashing** - Why we hash passwords
+3. **Blood Compatibility** - O- universal donor logic
+4. **DynamoDB** - NoSQL vs SQL differences
+5. **SNS** - How SMS notifications work
+6. **EC2** - Cloud deployment process
+
+See `DEVELOPMENT_GUIDE.md` for 20+ viva Q&A.
+
+---
 
 ## 📝 License
 

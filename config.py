@@ -1,39 +1,62 @@
 """
 BloodBridge - Configuration Settings
 =====================================
-This file contains all configuration settings for the application.
-Modify these settings for different environments (local, dev, prod).
+Configuration for local development and AWS deployment.
+
+Usage:
+    from config import get_config
+    config = get_config()
 """
 
 import os
 
 # ============================================
-# FLASK SETTINGS
+# ENVIRONMENT DETECTION
+# ============================================
+
+def get_environment():
+    """Detect current environment."""
+    return os.environ.get('FLASK_ENV', 'development').lower()
+
+
+# ============================================
+# CONFIGURATION CLASSES
 # ============================================
 
 class Config:
     """Base configuration."""
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'bloodbridge-secret-key-change-in-production'
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'bloodbridge-dev-secret-key-2024')
     DEBUG = False
     TESTING = False
-
-
-class LocalConfig(Config):
-    """Local development configuration (no AWS)."""
-    DEBUG = True
-    USE_AWS = False
     
-    # Local storage (Python lists/dicts)
-    STORAGE_TYPE = 'local'
+    # Application settings
+    APP_NAME = 'BloodBridge'
+    APP_VERSION = '1.0.0'
 
 
-class AWSConfig(Config):
-    """AWS deployment configuration."""
+class DevelopmentConfig(Config):
+    """Local development configuration."""
+    DEBUG = True
+    
+    # Use local storage (Python lists/dicts)
+    USE_DYNAMODB = False
+    USE_SNS = False
+    
+    # Server settings
+    HOST = '127.0.0.1'
+    PORT = 5000
+
+
+class ProductionConfig(Config):
+    """Production/AWS configuration."""
     DEBUG = False
-    USE_AWS = True
+    
+    # Use AWS services
+    USE_DYNAMODB = True
+    USE_SNS = True
     
     # AWS Settings
-    AWS_REGION = os.environ.get('AWS_REGION') or 'us-east-1'
+    AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
     
     # DynamoDB Tables
     DYNAMODB_USERS_TABLE = 'bloodbridge_users'
@@ -41,30 +64,56 @@ class AWSConfig(Config):
     DYNAMODB_INVENTORY_TABLE = 'bloodbridge_inventory'
     
     # SNS Topics
-    SNS_ALERTS_TOPIC = os.environ.get('SNS_ALERTS_TOPIC') or 'arn:aws:sns:us-east-1:YOUR_ACCOUNT:bloodbridge-alerts'
-    SNS_EMERGENCY_TOPIC = os.environ.get('SNS_EMERGENCY_TOPIC') or 'arn:aws:sns:us-east-1:YOUR_ACCOUNT:bloodbridge-emergency'
-
-
-class ProductionConfig(AWSConfig):
-    """Production configuration."""
-    DEBUG = False
+    SNS_ALERTS_TOPIC = os.environ.get('SNS_ALERTS_TOPIC', '')
+    SNS_EMERGENCY_TOPIC = os.environ.get('SNS_EMERGENCY_TOPIC', '')
     
-    # Use environment variable for secret key in production
+    # Server settings
+    HOST = '0.0.0.0'
+    PORT = 80
+    
+    # Security - Must set in environment!
     SECRET_KEY = os.environ.get('SECRET_KEY')
     
-    if not SECRET_KEY:
-        raise ValueError("No SECRET_KEY set for production!")
+    def __init__(self):
+        if not self.SECRET_KEY:
+            raise ValueError("SECRET_KEY environment variable must be set in production!")
+
+
+class TestingConfig(Config):
+    """Testing configuration."""
+    DEBUG = True
+    TESTING = True
+    
+    USE_DYNAMODB = False
+    USE_SNS = False
 
 
 # ============================================
-# BLOOD GROUP SETTINGS
+# CONFIGURATION SELECTOR
+# ============================================
+
+config_map = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig
+}
+
+
+def get_config():
+    """Get configuration based on environment."""
+    env = get_environment()
+    config_class = config_map.get(env, DevelopmentConfig)
+    return config_class()
+
+
+# ============================================
+# BLOOD GROUP CONSTANTS
 # ============================================
 
 BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
-# Blood compatibility chart
-# Key: Donor blood type → Value: Can donate to these types
-BLOOD_COMPATIBILITY = {
+# Who can DONATE to whom
+COMPATIBILITY = {
     'O-':  ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],  # Universal donor
     'O+':  ['A+', 'B+', 'AB+', 'O+'],
     'A-':  ['A+', 'A-', 'AB+', 'AB-'],
@@ -75,8 +124,8 @@ BLOOD_COMPATIBILITY = {
     'AB+': ['AB+']  # Can only donate to AB+
 }
 
-# Can receive from
-BLOOD_RECEIVE_FROM = {
+# Who can RECEIVE from whom
+CAN_RECEIVE_FROM = {
     'O-':  ['O-'],  # Can only receive from O-
     'O+':  ['O-', 'O+'],
     'A-':  ['O-', 'A-'],
@@ -89,21 +138,7 @@ BLOOD_RECEIVE_FROM = {
 
 
 # ============================================
-# URGENCY SETTINGS
-# ============================================
-
-URGENCY_LEVELS = ['low', 'medium', 'high', 'critical']
-
-URGENCY_DESCRIPTIONS = {
-    'low': 'Within a week',
-    'medium': 'Within 3 days',
-    'high': 'Within 24 hours',
-    'critical': 'Immediate'
-}
-
-
-# ============================================
-# BADGE SYSTEM
+# BADGE DEFINITIONS
 # ============================================
 
 BADGES = {
@@ -131,39 +166,17 @@ BADGES = {
         'name': 'Rare Donor',
         'icon': '💎',
         'description': 'Donated rare blood type (AB-, B-, O-)'
-    },
-    'regular': {
-        'name': 'Regular Donor',
-        'icon': '⭐',
-        'description': 'Donated 3+ times'
-    },
-    'champion': {
-        'name': 'Champion',
-        'icon': '🏆',
-        'description': 'Made 10+ donations'
     }
 }
 
 
 # ============================================
-# CONFIGURATION SELECTOR
+# URGENCY LEVELS
 # ============================================
 
-def get_config():
-    """
-    Get configuration based on environment.
-    Set FLASK_ENV environment variable to switch:
-    - 'local' or 'development': LocalConfig
-    - 'aws': AWSConfig
-    - 'production': ProductionConfig
-    """
-    env = os.environ.get('FLASK_ENV', 'local').lower()
-    
-    configs = {
-        'local': LocalConfig,
-        'development': LocalConfig,
-        'aws': AWSConfig,
-        'production': ProductionConfig
-    }
-    
-    return configs.get(env, LocalConfig)
+URGENCY_LEVELS = {
+    'low': {'label': 'Low', 'color': 'green', 'description': 'Within a week'},
+    'medium': {'label': 'Medium', 'color': 'yellow', 'description': 'Within 3 days'},
+    'high': {'label': 'High', 'color': 'orange', 'description': 'Within 24 hours'},
+    'critical': {'label': 'Critical', 'color': 'red', 'description': 'Immediate'}
+}
