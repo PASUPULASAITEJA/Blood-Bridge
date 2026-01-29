@@ -15,6 +15,7 @@ Features:
 - SMS notifications ready (AWS SNS)
 """
 
+import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
@@ -26,14 +27,17 @@ import re
 # ============================================
 # FLASK APP SETUP
 # ============================================
-# TODO [EC2]: Deploy with gunicorn -w 4 -b 0.0.0.0:5000 app:app
+# Deployment: Gunicorn via Procfile -> gunicorn wsgi:application
+
 
 app = Flask(__name__)
-app.secret_key = 'bloodbridge-secret-key-change-in-production'
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
 
 # ============================================
 # IN-MEMORY DATABASE (Replace with DynamoDB)
 # ============================================
+import logging
+logging.basicConfig(level=logging.INFO)
 
 # TODO [DynamoDB]: Replace with DynamoDB table 'bloodbridge_users'
 users_db = []
@@ -214,7 +218,7 @@ def send_sms(phone_number, message):
             Message=message
         )
     """
-    print(f"[SMS] To: {phone_number}")
+    logging.info(f"[SMS] To: {phone_number} | Message: {message}")
     print(f"[SMS] Message: {message}")
 
 
@@ -951,110 +955,19 @@ def not_found(e):
 def server_error(e):
     return render_template('error.html', error='Server error', code=500), 500
 
-
-# ============================================
-# DEMO DATA
-# ============================================
-
-def seed_demo_data():
-    """Seed demo data for testing."""
-    global users_db, blood_requests_db, activity_feed, emergency_alerts
-    
-    if users_db:
-        return
-    
-    print("[INFO] Seeding demo data...")
-    
-    # Demo users with phone numbers
-    demo_users = [
-        {'name': 'John Smith', 'email': 'john@demo.com', 'phone': '+91-98765-43210', 'blood': 'O+', 'password': 'demo123'},
-        {'name': 'Sarah Johnson', 'email': 'sarah@demo.com', 'phone': '+91-98765-43211', 'blood': 'A+', 'password': 'demo123'},
-        {'name': 'Mike Wilson', 'email': 'mike@demo.com', 'phone': '+91-98765-43212', 'blood': 'B+', 'password': 'demo123'},
-        {'name': 'Emily Davis', 'email': 'emily@demo.com', 'phone': '+91-98765-43213', 'blood': 'AB+', 'password': 'demo123'},
-        {'name': 'David Brown', 'email': 'david@demo.com', 'phone': '+91-98765-43214', 'blood': 'O-', 'password': 'demo123'},
-        {'name': 'Lisa Garcia', 'email': 'lisa@demo.com', 'phone': '+91-98765-43215', 'blood': 'A-', 'password': 'demo123'},
-    ]
-    
-    for user_data in demo_users:
-        users_db.append({
-            'user_id': str(uuid.uuid4()),
-            'full_name': user_data['name'],
-            'email': user_data['email'],
-            'phone': user_data['phone'],
-            'password_hash': generate_password_hash(user_data['password']),
-            'blood_group': user_data['blood'],
-            'created_at': datetime.now().isoformat()
-        })
-    
-    # Demo requests with contact phone
-    locations = ['City Hospital', 'General Medical Center', 'St. Mary Hospital', 'Apollo Hospital']
-    urgencies = ['low', 'medium', 'high', 'critical']
-    
-    for i in range(6):
-        user = users_db[i % len(users_db)]
-        blood_requests_db.append({
-            'request_id': str(uuid.uuid4()),
-            'requester_id': user['user_id'],
-            'blood_group': random.choice(BLOOD_GROUPS),
-            'location': random.choice(locations),
-            'quantity': random.randint(1, 4),
-            'urgency': random.choice(urgencies),
-            'contact_phone': user['phone'],
-            'notes': '',
-            'status': 'pending',
-            'donor_id': None,
-            'created_at': (datetime.now() - timedelta(hours=random.randint(1, 48))).isoformat()
-        })
-    
-    # Demo activities
-    activities = [
-        ('donation_complete', '💉 John Smith donated O+ blood', '✅'),
-        ('emergency', '🚨 EMERGENCY: AB- needed at General Medical!', '🚨'),
-        ('registration', 'New donor Emily Davis joined!', '🎉'),
-        ('request', 'Sarah Johnson needs A+ blood at City Hospital', '🩸'),
-    ]
-    
-    for activity_type, message, icon in activities:
-        activity_feed.append({
-            'activity_id': str(uuid.uuid4()),
-            'user_id': users_db[0]['user_id'],
-            'type': activity_type,
-            'message': message,
-            'icon': icon,
-            'timestamp': (datetime.now() - timedelta(minutes=random.randint(1, 120))).isoformat()
-        })
-    
-    # Demo emergency
-    emergency_alerts.append({
-        'alert_id': str(uuid.uuid4()),
-        'requester_id': users_db[0]['user_id'],
-        'requester_name': users_db[0]['full_name'],
-        'requester_phone': users_db[0]['phone'],
-        'blood_group': 'O-',
-        'location': 'Downtown Emergency Center',
-        'hospital': 'City General Hospital',
-        'contact_phone': users_db[0]['phone'],
-        'details': 'Accident victim needs immediate transfusion',
-        'status': 'active',
-        'created_at': datetime.now().isoformat(),
-        'responders': []
-    })
-    
-    print("[INFO] Demo data ready!")
-    print("[INFO] Login: john@demo.com / demo123")
-    print("[INFO] Phone: +91-98765-43210")
-
-
 # ============================================
 # MAIN
 # ============================================
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("\n" + "="*60)
-    print("  BloodBridge - Blood Bank Management System")
-    print("  URL: http://127.0.0.1:5000")
-    print("  Demo: john@demo.com / demo123")
+    print("  🩸 BloodBridge - Blood Bank Management System")
+    print("="*60)
+    print("  Status:  RUNNING")
+    print("  URL:     http://127.0.0.1:5000")
+    print("  Demo:    john@demo.com / demo123")
+    print("="*60)
+    print("  Press Ctrl+C to stop the server")
     print("="*60 + "\n")
     
-    seed_demo_data()
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=False)

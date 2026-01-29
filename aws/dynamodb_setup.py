@@ -1,6 +1,6 @@
 """
 BloodBridge - DynamoDB Table Setup Script
-==========================================
+========================================
 This script creates the required DynamoDB tables for BloodBridge.
 
 Prerequisites:
@@ -11,197 +11,186 @@ Usage:
     python aws/dynamodb_setup.py
 
 Tables Created:
-1. bloodbridge_users - User accounts
-2. bloodbridge_requests - Blood requests
-3. bloodbridge_inventory - Blood inventory
+1. bloodbridge_users
+2. bloodbridge_requests
+3. bloodbridge_inventory
 """
 
+import os
 import boto3
 from botocore.exceptions import ClientError
+from datetime import datetime
 
-# Configuration
-AWS_REGION = 'us-east-1'  # Change as needed
+# -------------------------------------------------
+# CONFIGURATION
+# -------------------------------------------------
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 
+# -------------------------------------------------
+# USERS TABLE
+# -------------------------------------------------
 def create_users_table(dynamodb):
     """
-    Create the users table with email GSI for login queries.
-    
-    Schema:
-    - user_id (PK): Unique identifier
-    - email (GSI): For login lookups
-    - full_name, password_hash, blood_group, created_at
+    Table: bloodbridge_users
+    PK : user_id
+    GSI: email-index (email)
     """
     try:
         table = dynamodb.create_table(
-            TableName='bloodbridge_users',
+            TableName="bloodbridge_users",
             KeySchema=[
-                {'AttributeName': 'user_id', 'KeyType': 'HASH'}
+                {"AttributeName": "user_id", "KeyType": "HASH"}
             ],
             AttributeDefinitions=[
-                {'AttributeName': 'user_id', 'AttributeType': 'S'},
-                {'AttributeName': 'email', 'AttributeType': 'S'}
+                {"AttributeName": "user_id", "AttributeType": "S"},
+                {"AttributeName": "email", "AttributeType": "S"}
             ],
             GlobalSecondaryIndexes=[
                 {
-                    'IndexName': 'email-index',
-                    'KeySchema': [
-                        {'AttributeName': 'email', 'KeyType': 'HASH'}
+                    "IndexName": "email-index",
+                    "KeySchema": [
+                        {"AttributeName": "email", "KeyType": "HASH"}
                     ],
-                    'Projection': {'ProjectionType': 'ALL'},
-                    'ProvisionedThroughput': {
-                        'ReadCapacityUnits': 5,
-                        'WriteCapacityUnits': 5
-                    }
+                    "Projection": {"ProjectionType": "ALL"}
                 }
             ],
-            ProvisionedThroughput={
-                'ReadCapacityUnits': 5,
-                'WriteCapacityUnits': 5
-            }
+            BillingMode="PAY_PER_REQUEST"
         )
         table.wait_until_exists()
-        print("✅ Table 'bloodbridge_users' created successfully!")
+        print("✅ Table created: bloodbridge_users")
         return table
+
     except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceInUseException':
-            print("⚠️  Table 'bloodbridge_users' already exists.")
+        if e.response["Error"]["Code"] == "ResourceInUseException":
+            print("⚠️  Table already exists: bloodbridge_users")
         else:
             raise
 
-
+# -------------------------------------------------
+# REQUESTS TABLE
+# -------------------------------------------------
 def create_requests_table(dynamodb):
     """
-    Create the blood requests table with status GSI.
-    
-    Schema:
-    - request_id (PK): Unique identifier
-    - status (GSI): For filtering pending/accepted/donated
-    - requester_id, blood_group, location, quantity, urgency, donor_id
+    Table: bloodbridge_requests
+    PK : request_id
+    GSI: status-index (status)
+    GSI: requester-index (requester_id)
     """
     try:
         table = dynamodb.create_table(
-            TableName='bloodbridge_requests',
+            TableName="bloodbridge_requests",
             KeySchema=[
-                {'AttributeName': 'request_id', 'KeyType': 'HASH'}
+                {"AttributeName": "request_id", "KeyType": "HASH"}
             ],
             AttributeDefinitions=[
-                {'AttributeName': 'request_id', 'AttributeType': 'S'},
-                {'AttributeName': 'status', 'AttributeType': 'S'},
-                {'AttributeName': 'requester_id', 'AttributeType': 'S'}
+                {"AttributeName": "request_id", "AttributeType": "S"},
+                {"AttributeName": "status", "AttributeType": "S"},
+                {"AttributeName": "requester_id", "AttributeType": "S"}
             ],
             GlobalSecondaryIndexes=[
                 {
-                    'IndexName': 'status-index',
-                    'KeySchema': [
-                        {'AttributeName': 'status', 'KeyType': 'HASH'}
+                    "IndexName": "status-index",
+                    "KeySchema": [
+                        {"AttributeName": "status", "KeyType": "HASH"}
                     ],
-                    'Projection': {'ProjectionType': 'ALL'},
-                    'ProvisionedThroughput': {
-                        'ReadCapacityUnits': 5,
-                        'WriteCapacityUnits': 5
-                    }
+                    "Projection": {"ProjectionType": "ALL"}
                 },
                 {
-                    'IndexName': 'requester-index',
-                    'KeySchema': [
-                        {'AttributeName': 'requester_id', 'KeyType': 'HASH'}
+                    "IndexName": "requester-index",
+                    "KeySchema": [
+                        {"AttributeName": "requester_id", "KeyType": "HASH"}
                     ],
-                    'Projection': {'ProjectionType': 'ALL'},
-                    'ProvisionedThroughput': {
-                        'ReadCapacityUnits': 5,
-                        'WriteCapacityUnits': 5
-                    }
+                    "Projection": {"ProjectionType": "ALL"}
                 }
             ],
-            ProvisionedThroughput={
-                'ReadCapacityUnits': 5,
-                'WriteCapacityUnits': 5
-            }
+            BillingMode="PAY_PER_REQUEST"
         )
         table.wait_until_exists()
-        print("✅ Table 'bloodbridge_requests' created successfully!")
+        print("✅ Table created: bloodbridge_requests")
         return table
+
     except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceInUseException':
-            print("⚠️  Table 'bloodbridge_requests' already exists.")
+        if e.response["Error"]["Code"] == "ResourceInUseException":
+            print("⚠️  Table already exists: bloodbridge_requests")
         else:
             raise
 
-
+# -------------------------------------------------
+# INVENTORY TABLE
+# -------------------------------------------------
 def create_inventory_table(dynamodb):
     """
-    Create the blood inventory table.
-    
-    Schema:
-    - blood_type (PK): A+, A-, B+, B-, AB+, AB-, O+, O-
-    - units: Available units
-    - last_updated: Timestamp
+    Table: bloodbridge_inventory
+    PK : blood_type
     """
     try:
         table = dynamodb.create_table(
-            TableName='bloodbridge_inventory',
+            TableName="bloodbridge_inventory",
             KeySchema=[
-                {'AttributeName': 'blood_type', 'KeyType': 'HASH'}
+                {"AttributeName": "blood_type", "KeyType": "HASH"}
             ],
             AttributeDefinitions=[
-                {'AttributeName': 'blood_type', 'AttributeType': 'S'}
+                {"AttributeName": "blood_type", "AttributeType": "S"}
             ],
-            ProvisionedThroughput={
-                'ReadCapacityUnits': 5,
-                'WriteCapacityUnits': 5
-            }
+            BillingMode="PAY_PER_REQUEST"
         )
         table.wait_until_exists()
-        print("✅ Table 'bloodbridge_inventory' created successfully!")
-        
-        # Initialize with default inventory
-        init_inventory(table)
+        print("✅ Table created: bloodbridge_inventory")
+
+        initialize_inventory(table)
         return table
+
     except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceInUseException':
-            print("⚠️  Table 'bloodbridge_inventory' already exists.")
+        if e.response["Error"]["Code"] == "ResourceInUseException":
+            print("⚠️  Table already exists: bloodbridge_inventory")
         else:
             raise
 
+# -------------------------------------------------
+# INVENTORY INITIALIZATION
+# -------------------------------------------------
+def initialize_inventory(table):
+    """Insert default blood inventory values."""
+    default_inventory = {
+        "A+": 25, "A-": 12,
+        "B+": 18, "B-": 8,
+        "AB+": 15, "AB-": 5,
+        "O+": 30, "O-": 10
+    }
 
-def init_inventory(table):
-    """Initialize blood inventory with default values."""
-    from datetime import datetime
-    
-    blood_types = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
-    default_units = {'A+': 25, 'A-': 12, 'B+': 18, 'B-': 8, 
-                     'AB+': 15, 'AB-': 5, 'O+': 30, 'O-': 10}
-    
-    for bt in blood_types:
-        table.put_item(Item={
-            'blood_type': bt,
-            'units': default_units[bt],
-            'last_updated': datetime.now().isoformat()
-        })
-    print("✅ Blood inventory initialized!")
+    for blood_type, units in default_inventory.items():
+        table.put_item(
+            Item={
+                "blood_type": blood_type,
+                "units": units,
+                "last_updated": datetime.now().isoformat()
+            }
+        )
 
+    print("✅ Blood inventory initialized")
 
+# -------------------------------------------------
+# MAIN
+# -------------------------------------------------
 def main():
-    """Main function to create all tables."""
-    print("\n" + "="*50)
-    print("  BloodBridge - DynamoDB Setup")
-    print("="*50 + "\n")
-    
-    # Initialize DynamoDB resource
-    dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
-    
+    print("\n" + "=" * 55)
+    print("   BloodBridge – DynamoDB Setup")
+    print("=" * 55)
+
     print(f"Region: {AWS_REGION}\n")
-    print("Creating tables...\n")
-    
-    # Create tables
+
+    dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+
+    print("Creating DynamoDB tables...\n")
+
     create_users_table(dynamodb)
     create_requests_table(dynamodb)
     create_inventory_table(dynamodb)
-    
-    print("\n" + "="*50)
-    print("  Setup Complete!")
-    print("="*50 + "\n")
 
+    print("\n" + "=" * 55)
+    print("   DynamoDB Setup Completed Successfully")
+    print("=" * 55 + "\n")
 
-if __name__ == '__main__':
+# -------------------------------------------------
+if __name__ == "__main__":
     main()
