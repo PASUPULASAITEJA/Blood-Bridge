@@ -10,18 +10,14 @@ Usage:
 
 import os
 
-# ============================================
 # ENVIRONMENT DETECTION
-# ============================================
 
 def get_environment():
     """Detect current environment."""
     return os.environ.get('FLASK_ENV', 'development').lower()
 
 
-# ============================================
 # CONFIGURATION CLASSES
-# ============================================
 
 class Config:
     """Base configuration."""
@@ -88,9 +84,7 @@ class TestingConfig(Config):
     USE_SNS = False
 
 
-# ============================================
 # CONFIGURATION SELECTOR
-# ============================================
 
 config_map = {
     'development': DevelopmentConfig,
@@ -106,9 +100,7 @@ def get_config():
     return config_class()
 
 
-# ============================================
 # BLOOD GROUP CONSTANTS
-# ============================================
 
 BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
@@ -137,9 +129,7 @@ CAN_RECEIVE_FROM = {
 }
 
 
-# ============================================
 # BADGE DEFINITIONS
-# ============================================
 
 BADGES = {
     'first_blood': {
@@ -170,9 +160,7 @@ BADGES = {
 }
 
 
-# ============================================
 # URGENCY LEVELS
-# ============================================
 
 URGENCY_LEVELS = {
     'low': {'label': 'Low', 'color': 'green', 'description': 'Within a week'},
