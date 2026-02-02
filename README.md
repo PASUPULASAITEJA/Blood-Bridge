@@ -170,7 +170,6 @@ python aws/sns_setup.py
 # 5. Deploy to EC2
 # See DEPLOYMENT_GUIDE.md
 ```
-
 ---
 
 ## 📚 Documentation
