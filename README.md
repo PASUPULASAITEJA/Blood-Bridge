@@ -44,38 +44,38 @@ http://127.0.0.1:5000
 
 ```
 bloodbridge/
-├── app.py                    # Main Flask application
-├── config.py                 # Configuration settings
-├── requirements.txt          # Dependencies
-├── setup.py                  # Setup script
-├── run.py                    # Production run script
-├── README.md                 # This file
-├── DEPLOYMENT_GUIDE.md       # Full deployment guide
-├── DEVELOPMENT_GUIDE.md      # Academic development guide
+├── app.py                    
+├── config.py                
+├── requirements.txt          
+├── setup.py                  
+├── run.py                    
+├── README.md                 
+├── DEPLOYMENT_GUIDE.md      
+├── DEVELOPMENT_GUIDE.md      
 │
-├── templates/                # HTML Templates
-│   ├── base.html             # Base template
-│   ├── index.html            # Landing page
-│   ├── login.html            # Login
-│   ├── register.html         # Registration
-│   ├── dashboard.html        # Dashboard
-│   ├── create_request.html   # Create request
-│   ├── all_requests.html     # All requests
-│   ├── profile.html          # Profile
-│   ├── realtime_dashboard.html # Real-time dashboard
-│   ├── blood_inventory.html  # Inventory
-│   ├── blood_camps.html      # Camps
-│   ├── sos_emergency.html    # SOS
-│   ├── emergency_list.html   # Emergencies
-│   ├── leaderboard.html      # Leaderboard
-│   └── error.html            # Errors
+├── templates/                
+│   ├── base.html             
+│   ├── index.html           
+│   ├── login.html            
+│   ├── register.html        
+│   ├── dashboard.html       
+│   ├── create_request.html  
+│   ├── all_requests.html     
+│   ├── profile.html         
+│   ├── realtime_dashboard.html
+│   ├── blood_inventory.html  
+│   ├── blood_camps.html      
+│   ├── sos_emergency.html   
+│   ├── emergency_list.html   
+│   ├── leaderboard.html      
+│   └── error.html            
 │
-└── aws/                      # AWS Integration
-    ├── dynamodb_setup.py     # DynamoDB tables
-    ├── dynamodb_helper.py    # DynamoDB CRUD
-    ├── sns_setup.py          # SNS topics
-    ├── sns_helper.py         # SMS functions
-    └── iam_policy.json       # IAM policy
+└── aws/                      
+    ├── dynamodb_setup.py    
+    ├── dynamodb_helper.py    
+    ├── sns_setup.py        
+    ├── sns_helper.py        
+    └── iam_policy.json       
 ```
 
 ---
@@ -195,9 +195,7 @@ python aws/sns_setup.py
 
 ---
 
-## 👨‍💻 For Viva
-
-Key points to explain:
+## 👨‍💻 Key points to explain:
 1. **Flask Sessions** - How user authentication works
 2. **Password Hashing** - Why we hash passwords
 3. **Blood Compatibility** - O- universal donor logic
@@ -209,12 +207,6 @@ See `DEVELOPMENT_GUIDE.md` for 20+ viva Q&A.
 
 ---
 
-## 📝 License
-
-Academic project for final year evaluation.
-
----
-
-**Made with ❤️ for saving lives**
+**Made by me for saving lives**
 
 *BloodBridge - Every Drop Counts*
