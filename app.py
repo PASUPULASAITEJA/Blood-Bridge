@@ -1,20 +1,3 @@
-"""
-BloodBridge - Blood Bank Management System
-============================================
-A Flask application for managing blood donations with real-time features.
-
-Run: python app.py
-URL: http://127.0.0.1:5000
-Demo: john@demo.com / demo123
-
-Features:
-- User registration with phone number
-- Blood request management
-- Real-time dashboard
-- SOS Emergency alerts
-- SMS notifications ready (AWS SNS)
-"""
-
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -23,19 +6,9 @@ from functools import wraps
 import uuid
 import random
 import re
-
-# ============================================
 # FLASK APP SETUP
-# ============================================
-# Deployment: Gunicorn via Procfile -> gunicorn wsgi:application
-
-
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
-
-# ============================================
-# IN-MEMORY DATABASE (Replace with DynamoDB)
-# ============================================
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -59,7 +32,6 @@ blood_inventory = {
     'O+': {'units': 30, 'last_updated': datetime.now().isoformat()},
     'O-': {'units': 10, 'last_updated': datetime.now().isoformat()}
 }
-
 # Blood camps data
 blood_camps = [
     {
@@ -100,10 +72,7 @@ user_badges = {}
 # Real-time tracking
 online_users = {}
 activity_feed = []
-
-# ============================================
 # CONSTANTS
-# ============================================
 BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 # Blood compatibility chart
@@ -117,30 +86,21 @@ COMPATIBILITY = {
     'AB-': ['AB+', 'AB-'],
     'AB+': ['AB+']
 }
-
-# ============================================
 # HELPER FUNCTIONS
-# ============================================
 
 def validate_phone(phone):
     """Validate phone number format."""
-    # Remove spaces, dashes, parentheses
     cleaned = re.sub(r'[\s\-\(\)\.]', '', phone)
-    # Check if it's digits only and has valid length (10-15 digits)
     if cleaned.startswith('+'):
         cleaned = cleaned[1:]
     return cleaned.isdigit() and 10 <= len(cleaned) <= 15
-
-
 def format_phone(phone):
     """Format phone number for display."""
     cleaned = re.sub(r'[\s\-\(\)\.]', '', phone)
     if not cleaned.startswith('+'):
-        # Assume it's a local number, add country code format
         if len(cleaned) == 10:
             return f"+91-{cleaned[:5]}-{cleaned[5:]}"
     return phone
-
 
 def login_required(f):
     """Decorator to require login for protected routes."""
@@ -152,7 +112,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
 def get_user_by_id(user_id):
     """Find user by ID. TODO [DynamoDB]: Replace with get_item()"""
     for user in users_db:
@@ -160,14 +119,12 @@ def get_user_by_id(user_id):
             return user
     return None
 
-
 def get_user_by_email(email):
     """Find user by email. TODO [DynamoDB]: Replace with query using GSI"""
     for user in users_db:
         if user['email'].lower() == email.lower():
             return user
     return None
-
 
 def get_user_by_phone(phone):
     """Find user by phone. TODO [DynamoDB]: Replace with query using GSI"""
@@ -177,7 +134,6 @@ def get_user_by_phone(phone):
         if user_phone == cleaned_phone:
             return user
     return None
-
 
 def get_compatible_requests(user_blood_group):
     """Get blood requests that the user can donate to."""
@@ -191,9 +147,7 @@ def get_compatible_requests(user_blood_group):
             req_copy['requester_name'] = requester['full_name'] if requester else 'Unknown'
             req_copy['requester_phone'] = requester.get('phone', 'N/A') if requester else 'N/A'
             matching_requests.append(req_copy)
-    
     return matching_requests
-
 
 def send_notification(recipient, subject, message):
     """
@@ -205,7 +159,6 @@ def send_notification(recipient, subject, message):
     """
     print(f"[NOTIFICATION] To: {recipient} | Subject: {subject}")
     print(f"[MESSAGE] {message}")
-
 
 def send_sms(phone_number, message):
     """
@@ -221,7 +174,6 @@ def send_sms(phone_number, message):
     logging.info(f"[SMS] To: {phone_number} | Message: {message}")
     print(f"[SMS] Message: {message}")
 
-
 def add_activity(user_id, activity_type, message, icon='🔔'):
     """Add activity to the feed."""
     activity_feed.insert(0, {
@@ -235,7 +187,6 @@ def add_activity(user_id, activity_type, message, icon='🔔'):
     if len(activity_feed) > 50:
         activity_feed.pop()
 
-
 def award_badge(user_id, badge_key):
     """Award a badge to user."""
     if user_id not in user_badges:
@@ -248,13 +199,12 @@ def award_badge(user_id, badge_key):
         return True
     return False
 
-
 def get_user_stats(user_id):
     """Get stats for a user."""
     donations = sum(1 for req in blood_requests_db 
                    if req.get('donor_id') == user_id and req['status'] == 'donated')
     requests = sum(1 for req in blood_requests_db if req['requester_id'] == user_id)
-    
+   
     return {
         'donations': donations,
         'requests': requests,
@@ -262,12 +212,9 @@ def get_user_stats(user_id):
         'badges': user_badges.get(user_id, [])
     }
 
-
 def update_user_activity(user_id):
     """Update user's last activity timestamp."""
     online_users[user_id] = datetime.now().isoformat()
-
-
 def get_online_donors_count():
     """Count users active in last 5 minutes."""
     now = datetime.now()
@@ -280,7 +227,6 @@ def get_online_donors_count():
         except:
             pass
     return count
-
 
 def get_realtime_inventory():
     """Get blood inventory with status."""
@@ -298,13 +244,11 @@ def get_realtime_inventory():
         inventory[blood_type] = {'units': units, 'status': status}
     return inventory
 
-
 def notify_compatible_donors(blood_group, location, urgency, requester_name):
     """
     Notify all compatible donors about a blood request.
     TODO [SNS]: Send SMS to all compatible donors
     """
-    # Find donors who can donate to this blood group
     for user in users_db:
         user_blood = user.get('blood_group')
         if blood_group in COMPATIBILITY.get(user_blood, []):
@@ -313,16 +257,12 @@ def notify_compatible_donors(blood_group, location, urgency, requester_name):
                 message = f"🩸 BLOOD REQUEST: {blood_group} needed at {location}. Urgency: {urgency.upper()}. Contact: {requester_name}. Open BloodBridge to respond."
                 send_sms(phone, message)
 
-
-# ============================================
 # PUBLIC ROUTES
-# ============================================
 
 @app.route('/')
 def index():
     """Landing page."""
     return render_template('index.html')
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -361,7 +301,7 @@ def register():
                 flash(error, 'danger')
             return render_template('register.html', blood_groups=BLOOD_GROUPS)
         
-        # Create user - TODO [DynamoDB]: Replace with put_item()
+        # Create user - 
         new_user = {
             'user_id': str(uuid.uuid4()),
             'full_name': full_name,
@@ -419,10 +359,7 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
-
-# ============================================
 # DASHBOARD & REQUESTS
-# ============================================
 
 @app.route('/dashboard')
 @login_required
@@ -485,7 +422,7 @@ def create_request():
             user = get_user_by_id(session['user_id'])
             contact_phone = user.get('phone', '') if user else ''
         
-        # Create request - TODO [DynamoDB]: Replace with put_item()
+        # Create request 
         new_request = {
             'request_id': str(uuid.uuid4()),
             'requester_id': session['user_id'],
@@ -676,10 +613,7 @@ def profile():
         requests_count=stats['requests']
     )
 
-
-# ============================================
 # UNIQUE FEATURES
-# ============================================
 
 @app.route('/realtime-dashboard')
 @login_required
@@ -874,9 +808,7 @@ def leaderboard():
     return render_template('leaderboard.html', leaderboard=leaderboard_list[:20])
 
 
-# ============================================
 # API ENDPOINTS (Real-Time Data)
-# ============================================
 
 @app.route('/api/realtime-data')
 def realtime_data():
@@ -941,10 +873,7 @@ def blood_facts():
     ]
     return jsonify({'fact': random.choice(facts)})
 
-
-# ============================================
 # ERROR HANDLERS
-# ============================================
 
 @app.errorhandler(404)
 def not_found(e):
@@ -955,9 +884,7 @@ def not_found(e):
 def server_error(e):
     return render_template('error.html', error='Server error', code=500), 500
 
-# ============================================
 # MAIN
-# ============================================
 
 if __name__ == "__main__":
     print("\n" + "="*60)
@@ -969,5 +896,4 @@ if __name__ == "__main__":
     print("="*60)
     print("  Press Ctrl+C to stop the server")
     print("="*60 + "\n")
-    
     app.run(host="127.0.0.1", port=5000, debug=False)
