@@ -885,7 +885,6 @@ def server_error(e):
     return render_template('error.html', error='Server error', code=500), 500
 
 # MAIN
-
 if __name__ == "__main__":
     print("\n" + "="*60)
     print("  🩸 BloodBridge - Blood Bank Management System")
