@@ -53,19 +53,28 @@ class ProductionConfig(Config):
     
     # AWS Settings
     AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
+    AWS_PROFILE = os.environ.get('AWS_PROFILE', 'default')
     
     # DynamoDB Tables
-    DYNAMODB_USERS_TABLE = 'bloodbridge_users'
-    DYNAMODB_REQUESTS_TABLE = 'bloodbridge_requests'
-    DYNAMODB_INVENTORY_TABLE = 'bloodbridge_inventory'
+    DYNAMODB_USERS_TABLE = os.environ.get('DYNAMODB_USERS_TABLE', 'bloodbridge_users')
+    DYNAMODB_REQUESTS_TABLE = os.environ.get('DYNAMODB_REQUESTS_TABLE', 'bloodbridge_requests')
+    DYNAMODB_INVENTORY_TABLE = os.environ.get('DYNAMODB_INVENTORY_TABLE', 'bloodbridge_inventory')
+    DYNAMODB_EMERGENCIES_TABLE = os.environ.get('DYNAMODB_EMERGENCIES_TABLE', 'bloodbridge_emergencies')
     
-    # SNS Topics
+    # SNS Configuration
+    SNS_ENABLED = os.environ.get('SNS_ENABLED', 'true').lower() == 'true'
     SNS_ALERTS_TOPIC = os.environ.get('SNS_ALERTS_TOPIC', '')
     SNS_EMERGENCY_TOPIC = os.environ.get('SNS_EMERGENCY_TOPIC', '')
+    SNS_REGION = os.environ.get('SNS_REGION', 'us-east-1')
+    
+    # CloudWatch Logging
+    CLOUDWATCH_LOG_GROUP = os.environ.get('CLOUDWATCH_LOG_GROUP', '/aws/bloodbridge/app')
+    CLOUDWATCH_ENABLED = os.environ.get('CLOUDWATCH_ENABLED', 'true').lower() == 'true'
     
     # Server settings
     HOST = '0.0.0.0'
-    PORT = 80
+    PORT = int(os.environ.get('PORT', 80))
+    WORKERS = int(os.environ.get('WORKERS', 4))
     
     # Security - Must set in environment!
     SECRET_KEY = os.environ.get('SECRET_KEY')

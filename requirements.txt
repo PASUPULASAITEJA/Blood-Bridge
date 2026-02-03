@@ -6,8 +6,15 @@
 Flask==3.0.0
 Werkzeug==3.0.1
 
-# AWS SDK (for cloud deployment - uncomment when needed)
+# AWS SDK (for cloud deployment)
 boto3==1.34.0
+botocore==1.34.0
 
-# Production Server (for EC2 deployment - uncomment when needed)
+# AWS CLI Tools
+awscli==1.44.27
+
+# Production Server (for EC2 deployment)
 gunicorn==21.2.0
+
+# Utilities
+python-dotenv==1.0.0

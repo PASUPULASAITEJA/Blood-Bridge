@@ -6,22 +6,41 @@ from functools import wraps
 import uuid
 import random
 import re
+import logging
+
 # FLASK APP SETUP
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
-import logging
+app.secret_key = os.getenv("SECRET_KEY", os.urandom(32).hex())
+
+# Logging setup
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# TODO [DynamoDB]: Replace with DynamoDB table 'bloodbridge_users'
+# AWS SERVICES IMPORT
+USE_AWS = os.getenv("USE_AWS", "false").lower() == "true"
+
+if USE_AWS:
+    try:
+        from aws.dynamodb_helper import (
+            create_user, get_user_by_id, get_user_by_email, get_user_by_phone,
+            create_blood_request, get_blood_request, update_blood_request,
+            get_user_blood_requests, get_all_pending_requests,
+            get_inventory, update_inventory,
+            create_emergency_alert, get_emergency_alerts, update_emergency_alert
+        )
+        from aws.sns_helper import send_sms, send_emergency_alert
+        logger.info("✅ AWS Services initialized (DynamoDB + SNS)")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize AWS services: {e}")
+        logger.info("Falling back to local storage...")
+        USE_AWS = False
+else:
+    logger.info("⚠️  Using LOCAL STORAGE mode (development)")
+
+# LOCAL STORAGE FALLBACK (for development)
 users_db = []
-
-# TODO [DynamoDB]: Replace with DynamoDB table 'bloodbridge_requests'
 blood_requests_db = []
-
-# TODO [DynamoDB]: Replace with DynamoDB table 'bloodbridge_emergencies'
 emergency_alerts = []
-
-# TODO [DynamoDB]: Replace with DynamoDB table 'bloodbridge_inventory'
 blood_inventory = {
     'A+': {'units': 25, 'last_updated': datetime.now().isoformat()},
     'A-': {'units': 12, 'last_updated': datetime.now().isoformat()},
@@ -32,7 +51,8 @@ blood_inventory = {
     'O+': {'units': 30, 'last_updated': datetime.now().isoformat()},
     'O-': {'units': 10, 'last_updated': datetime.now().isoformat()}
 }
-# Blood camps data
+
+# Blood camps data (can be stored in DynamoDB if needed)
 blood_camps = [
     {
         'camp_id': str(uuid.uuid4()),
@@ -72,6 +92,7 @@ user_badges = {}
 # Real-time tracking
 online_users = {}
 activity_feed = []
+
 # CONSTANTS
 BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
@@ -86,7 +107,10 @@ COMPATIBILITY = {
     'AB-': ['AB+', 'AB-'],
     'AB+': ['AB+']
 }
+
+# ============================================
 # HELPER FUNCTIONS
+# ============================================
 
 def validate_phone(phone):
     """Validate phone number format."""
@@ -94,9 +118,10 @@ def validate_phone(phone):
     if cleaned.startswith('+'):
         cleaned = cleaned[1:]
     return cleaned.isdigit() and 10 <= len(cleaned) <= 15
+
 def format_phone(phone):
     """Format phone number for display."""
-    cleaned = re.sub(r'[\s\-\(\)\.]', '', phone)
+    cleaned = re.sub(r'[\s\-\(\)\.\+]', '', phone)
     if not cleaned.startswith('+'):
         if len(cleaned) == 10:
             return f"+91-{cleaned[:5]}-{cleaned[5:]}"
@@ -112,22 +137,22 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def get_user_by_id(user_id):
-    """Find user by ID. TODO [DynamoDB]: Replace with get_item()"""
+def get_local_user_by_id(user_id):
+    """Get user from local storage."""
     for user in users_db:
         if user['user_id'] == user_id:
             return user
     return None
 
-def get_user_by_email(email):
-    """Find user by email. TODO [DynamoDB]: Replace with query using GSI"""
+def get_local_user_by_email(email):
+    """Get user from local storage by email."""
     for user in users_db:
         if user['email'].lower() == email.lower():
             return user
     return None
 
-def get_user_by_phone(phone):
-    """Find user by phone. TODO [DynamoDB]: Replace with query using GSI"""
+def get_local_user_by_phone(phone):
+    """Get user from local storage by phone."""
     cleaned_phone = re.sub(r'[\s\-\(\)\.\+]', '', phone)
     for user in users_db:
         user_phone = re.sub(r'[\s\-\(\)\.\+]', '', user.get('phone', ''))
@@ -135,12 +160,54 @@ def get_user_by_phone(phone):
             return user
     return None
 
+def get_user_by_id(user_id):
+    """Get user by ID (AWS or local)."""
+    if USE_AWS:
+        try:
+            return get_user_by_id(user_id)
+        except Exception as e:
+            logger.error(f"Error fetching user from DynamoDB: {e}")
+            return get_local_user_by_id(user_id)
+    else:
+        return get_local_user_by_id(user_id)
+
+def get_user_by_email(email):
+    """Get user by email (AWS or local)."""
+    if USE_AWS:
+        try:
+            return get_user_by_email(email)
+        except Exception as e:
+            logger.error(f"Error querying user from DynamoDB: {e}")
+            return get_local_user_by_email(email)
+    else:
+        return get_local_user_by_email(email)
+
+def get_user_by_phone(phone):
+    """Get user by phone (AWS or local)."""
+    if USE_AWS:
+        try:
+            return get_user_by_phone(phone)
+        except Exception as e:
+            logger.error(f"Error querying user from DynamoDB: {e}")
+            return get_local_user_by_phone(phone)
+    else:
+        return get_local_user_by_phone(phone)
+
 def get_compatible_requests(user_blood_group):
     """Get blood requests that the user can donate to."""
     compatible_groups = COMPATIBILITY.get(user_blood_group, [])
     matching_requests = []
     
-    for req in blood_requests_db:
+    if USE_AWS:
+        try:
+            requests = get_all_pending_requests()
+        except Exception as e:
+            logger.error(f"Error fetching requests from DynamoDB: {e}")
+            requests = blood_requests_db
+    else:
+        requests = blood_requests_db
+    
+    for req in requests:
         if req['blood_group'] in compatible_groups and req['status'] == 'pending':
             requester = get_user_by_id(req['requester_id'])
             req_copy = req.copy()
@@ -149,30 +216,16 @@ def get_compatible_requests(user_blood_group):
             matching_requests.append(req_copy)
     return matching_requests
 
-def send_notification(recipient, subject, message):
-    """
-    Send notification.
-    TODO [SNS]: Replace with AWS SNS publish
-    
-    For SMS: Use sns.publish(PhoneNumber=phone, Message=message)
-    For Email: Use sns.publish(TopicArn=topic, Message=message)
-    """
-    print(f"[NOTIFICATION] To: {recipient} | Subject: {subject}")
-    print(f"[MESSAGE] {message}")
-
-def send_sms(phone_number, message):
-    """
-    Send SMS notification.
-    TODO [SNS]: Replace with AWS SNS SMS
-    
-    Example:
-        sns.publish(
-            PhoneNumber=phone_number,
-            Message=message
-        )
-    """
-    logging.info(f"[SMS] To: {phone_number} | Message: {message}")
-    print(f"[SMS] Message: {message}")
+def send_notification_sms(phone_number, message):
+    """Send SMS notification using AWS SNS or log locally."""
+    if USE_AWS:
+        try:
+            send_sms(phone_number, message)
+            logger.info(f"✅ SMS sent to {phone_number}")
+        except Exception as e:
+            logger.error(f"❌ Failed to send SMS: {e}")
+    else:
+        logging.info(f"[SMS] To: {phone_number} | Message: {message}")
 
 def add_activity(user_id, activity_type, message, icon='🔔'):
     """Add activity to the feed."""
@@ -201,13 +254,21 @@ def award_badge(user_id, badge_key):
 
 def get_user_stats(user_id):
     """Get stats for a user."""
-    donations = sum(1 for req in blood_requests_db 
-                   if req.get('donor_id') == user_id and req['status'] == 'donated')
-    requests = sum(1 for req in blood_requests_db if req['requester_id'] == user_id)
-   
+    if USE_AWS:
+        try:
+            requests = get_user_blood_requests(user_id)
+        except Exception as e:
+            logger.error(f"Error fetching requests from DynamoDB: {e}")
+            requests = [r for r in blood_requests_db if r['requester_id'] == user_id]
+    else:
+        requests = [r for r in blood_requests_db if r['requester_id'] == user_id]
+    
+    donations = sum(1 for req in requests if req.get('donor_id') == user_id and req['status'] == 'donated')
+    requests_count = sum(1 for req in requests if req['requester_id'] == user_id)
+    
     return {
         'donations': donations,
-        'requests': requests,
+        'requests': requests_count,
         'lives_saved': donations * 3,
         'badges': user_badges.get(user_id, [])
     }
@@ -215,6 +276,7 @@ def get_user_stats(user_id):
 def update_user_activity(user_id):
     """Update user's last activity timestamp."""
     online_users[user_id] = datetime.now().isoformat()
+
 def get_online_donors_count():
     """Count users active in last 5 minutes."""
     now = datetime.now()
@@ -230,8 +292,17 @@ def get_online_donors_count():
 
 def get_realtime_inventory():
     """Get blood inventory with status."""
+    if USE_AWS:
+        try:
+            inv = get_inventory()
+        except Exception as e:
+            logger.error(f"Error fetching inventory from DynamoDB: {e}")
+            inv = blood_inventory
+    else:
+        inv = blood_inventory
+    
     inventory = {}
-    for blood_type, data in blood_inventory.items():
+    for blood_type, data in inv.items():
         units = data['units']
         if units <= 5:
             status = 'critical'
@@ -244,16 +315,14 @@ def get_realtime_inventory():
         inventory[blood_type] = {'units': units, 'status': status}
     return inventory
 
-
 def seed_demo_data():
     """Create demo data for testing when running locally."""
-    # Do not duplicate demo users if they already exist
     if any(u.get('email') == 'john@demo.com' for u in users_db):
         return
 
     demo_users = [
-        {'name': 'John Smith', 'email': 'john@demo.com', 'blood': 'O+', 'password': 'demo123'},
-        {'name': 'Sarah Johnson', 'email': 'sarah@demo.com', 'blood': 'A+', 'password': 'demo123'},
+        {'name': 'John Smith', 'email': 'john@demo.com', 'blood': 'O+', 'password': 'demo123', 'phone': '+91-9876543210'},
+        {'name': 'Sarah Johnson', 'email': 'sarah@demo.com', 'blood': 'A+', 'password': 'demo123', 'phone': '+91-9876543211'},
     ]
 
     for user in demo_users:
@@ -261,25 +330,34 @@ def seed_demo_data():
             'user_id': str(uuid.uuid4()),
             'full_name': user['name'],
             'email': user['email'],
+            'phone': user['phone'],
             'password_hash': generate_password_hash(user['password']),
             'blood_group': user['blood'],
             'created_at': datetime.now().isoformat()
         })
 
 def notify_compatible_donors(blood_group, location, urgency, requester_name):
-    """
-    Notify all compatible donors about a blood request.
-    TODO [SNS]: Send SMS to all compatible donors
-    """
+    """Notify all compatible donors about a blood request."""
+    if USE_AWS:
+        try:
+            send_emergency_alert(blood_group, location, urgency, requester_name)
+            logger.info(f"✅ Donors notified via AWS SNS")
+            return
+        except Exception as e:
+            logger.error(f"❌ Failed to notify via SNS: {e}")
+    
+    # Fallback to local notification
     for user in users_db:
         user_blood = user.get('blood_group')
         if blood_group in COMPATIBILITY.get(user_blood, []):
             phone = user.get('phone')
             if phone:
                 message = f"🩸 BLOOD REQUEST: {blood_group} needed at {location}. Urgency: {urgency.upper()}. Contact: {requester_name}. Open BloodBridge to respond."
-                send_sms(phone, message)
+                send_notification_sms(phone, message)
 
+# ============================================
 # PUBLIC ROUTES
+# ============================================
 
 @app.route('/')
 def index():
@@ -323,7 +401,7 @@ def register():
                 flash(error, 'danger')
             return render_template('register.html', blood_groups=BLOOD_GROUPS)
         
-        # Create user - 
+        # Create user
         new_user = {
             'user_id': str(uuid.uuid4()),
             'full_name': full_name,
@@ -333,18 +411,26 @@ def register():
             'blood_group': blood_group,
             'created_at': datetime.now().isoformat()
         }
-        users_db.append(new_user)
+        
+        if USE_AWS:
+            try:
+                create_user(new_user)
+                logger.info(f"✅ User created in DynamoDB: {email}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create user in DynamoDB: {e}")
+                users_db.append(new_user)
+        else:
+            users_db.append(new_user)
         
         add_activity(new_user['user_id'], 'registration', f"🎉 {full_name} joined BloodBridge!", '🎉')
         
-        # TODO [SNS]: Send welcome SMS
-        send_sms(phone, f"Welcome to BloodBridge, {full_name}! Your account is ready. Start saving lives today!")
+        # Send welcome SMS
+        send_notification_sms(phone, f"Welcome to BloodBridge, {full_name}! Your account is ready. Start saving lives today!")
         
         flash('Registration successful! Please login.', 'success')
         return redirect(url_for('login'))
     
     return render_template('register.html', blood_groups=BLOOD_GROUPS)
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -373,7 +459,6 @@ def login():
     
     return render_template('login.html')
 
-
 @app.route('/logout')
 def logout():
     """User logout."""
@@ -381,7 +466,9 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
+# ============================================
 # DASHBOARD & REQUESTS
+# ============================================
 
 @app.route('/dashboard')
 @login_required
@@ -394,8 +481,16 @@ def dashboard():
     urgency_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
     matching_requests.sort(key=lambda x: urgency_order.get(x['urgency'], 4))
     
-    my_requests = [req for req in blood_requests_db if req['requester_id'] == session['user_id']]
-    my_donations = [req for req in blood_requests_db if req.get('donor_id') == session['user_id']]
+    if USE_AWS:
+        try:
+            my_requests = get_user_blood_requests(session['user_id'])
+        except Exception as e:
+            logger.error(f"Error fetching user requests: {e}")
+            my_requests = [req for req in blood_requests_db if req['requester_id'] == session['user_id']]
+    else:
+        my_requests = [req for req in blood_requests_db if req['requester_id'] == session['user_id']]
+    
+    my_donations = [req for req in my_requests if req.get('donor_id') == session['user_id']]
     
     return render_template('dashboard.html',
         matching_requests=matching_requests,
@@ -403,7 +498,6 @@ def dashboard():
         my_donations=my_donations,
         user_blood_group=user_blood_group
     )
-
 
 @app.route('/request/create', methods=['GET', 'POST'])
 @login_required
@@ -444,7 +538,7 @@ def create_request():
             user = get_user_by_id(session['user_id'])
             contact_phone = user.get('phone', '') if user else ''
         
-        # Create request 
+        # Create request
         new_request = {
             'request_id': str(uuid.uuid4()),
             'requester_id': session['user_id'],
@@ -458,13 +552,22 @@ def create_request():
             'donor_id': None,
             'created_at': datetime.now().isoformat()
         }
-        blood_requests_db.append(new_request)
+        
+        if USE_AWS:
+            try:
+                create_blood_request(new_request)
+                logger.info(f"✅ Blood request created in DynamoDB")
+            except Exception as e:
+                logger.error(f"❌ Failed to create request in DynamoDB: {e}")
+                blood_requests_db.append(new_request)
+        else:
+            blood_requests_db.append(new_request)
         
         user = get_user_by_id(session['user_id'])
         add_activity(session['user_id'], 'request', 
                     f"{user['full_name']} needs {blood_group} blood at {location}", '🩸')
         
-        # TODO [SNS]: Notify compatible donors via SMS
+        # Notify compatible donors
         notify_compatible_donors(blood_group, location, urgency, user['full_name'])
         
         flash('Blood request created successfully! Compatible donors have been notified.', 'success')
@@ -473,16 +576,22 @@ def create_request():
     user = get_user_by_id(session['user_id'])
     return render_template('create_request.html', blood_groups=BLOOD_GROUPS, user=user)
 
-
 @app.route('/request/<request_id>/respond', methods=['POST'])
 @login_required
 def respond_to_request(request_id):
     """Respond to a blood request."""
-    blood_request = None
-    for req in blood_requests_db:
-        if req['request_id'] == request_id:
-            blood_request = req
-            break
+    if USE_AWS:
+        try:
+            blood_request = get_blood_request(request_id)
+        except Exception as e:
+            logger.error(f"Error fetching request: {e}")
+            blood_request = None
+    else:
+        blood_request = None
+        for req in blood_requests_db:
+            if req['request_id'] == request_id:
+                blood_request = req
+                break
     
     if not blood_request:
         flash('Blood request not found.', 'danger')
@@ -501,30 +610,43 @@ def respond_to_request(request_id):
     blood_request['donor_id'] = session['user_id']
     blood_request['accepted_at'] = datetime.now().isoformat()
     
+    if USE_AWS:
+        try:
+            update_blood_request(blood_request)
+            logger.info(f"✅ Request updated in DynamoDB")
+        except Exception as e:
+            logger.error(f"❌ Failed to update request: {e}")
+    
     donor = get_user_by_id(session['user_id'])
     requester = get_user_by_id(blood_request['requester_id'])
     
     add_activity(session['user_id'], 'donation_offer', 
                 f"{donor['full_name']} offered to donate {blood_request['blood_group']} blood!", '💉')
     
-    # TODO [SNS]: Notify requester via SMS
+    # Notify requester via SMS
     if requester and requester.get('phone'):
         message = f"Good news! {donor['full_name']} has agreed to donate {blood_request['blood_group']} blood. Contact: {donor.get('phone', 'N/A')}"
-        send_sms(requester['phone'], message)
+        send_notification_sms(requester['phone'], message)
     
     flash('Thank you for offering to donate! The requester has been notified.', 'success')
     return redirect(url_for('dashboard'))
-
 
 @app.route('/request/<request_id>/confirm', methods=['POST'])
 @login_required
 def confirm_donation(request_id):
     """Confirm donation completed."""
-    blood_request = None
-    for req in blood_requests_db:
-        if req['request_id'] == request_id:
-            blood_request = req
-            break
+    if USE_AWS:
+        try:
+            blood_request = get_blood_request(request_id)
+        except Exception as e:
+            logger.error(f"Error fetching request: {e}")
+            blood_request = None
+    else:
+        blood_request = None
+        for req in blood_requests_db:
+            if req['request_id'] == request_id:
+                blood_request = req
+                break
     
     if not blood_request:
         flash('Blood request not found.', 'danger')
@@ -542,10 +664,26 @@ def confirm_donation(request_id):
     blood_request['status'] = 'donated'
     blood_request['donated_at'] = datetime.now().isoformat()
     
+    if USE_AWS:
+        try:
+            update_blood_request(blood_request)
+            logger.info(f"✅ Donation confirmed in DynamoDB")
+        except Exception as e:
+            logger.error(f"❌ Failed to confirm donation: {e}")
+    
     # Update inventory
     bg = blood_request['blood_group']
-    blood_inventory[bg]['units'] += blood_request['quantity']
-    blood_inventory[bg]['last_updated'] = datetime.now().isoformat()
+    if USE_AWS:
+        try:
+            update_inventory(bg, blood_request['quantity'])
+            logger.info(f"✅ Inventory updated in DynamoDB")
+        except Exception as e:
+            logger.error(f"❌ Failed to update inventory: {e}")
+            blood_inventory[bg]['units'] += blood_request['quantity']
+            blood_inventory[bg]['last_updated'] = datetime.now().isoformat()
+    else:
+        blood_inventory[bg]['units'] += blood_request['quantity']
+        blood_inventory[bg]['last_updated'] = datetime.now().isoformat()
     
     # Award badges
     donor_id = blood_request['donor_id']
@@ -553,8 +691,15 @@ def confirm_donation(request_id):
     
     award_badge(donor_id, 'first_blood')
     
-    total_donations = sum(1 for req in blood_requests_db 
-                         if req.get('donor_id') == donor_id and req['status'] == 'donated')
+    if USE_AWS:
+        try:
+            user_requests = get_user_blood_requests(donor_id)
+            total_donations = sum(1 for req in user_requests if req.get('donor_id') == donor_id and req['status'] == 'donated')
+        except Exception as e:
+            logger.error(f"Error fetching user requests: {e}")
+            total_donations = sum(1 for req in blood_requests_db if req.get('donor_id') == donor_id and req['status'] == 'donated')
+    else:
+        total_donations = sum(1 for req in blood_requests_db if req.get('donor_id') == donor_id and req['status'] == 'donated')
     
     if total_donations >= 3:
         award_badge(donor_id, 'lifesaver_3')
@@ -567,24 +712,30 @@ def confirm_donation(request_id):
     add_activity(donor_id, 'donation_complete', 
                 f"{donor['full_name']} completed a blood donation! 🎉", '✅')
     
-    # TODO [SNS]: Thank donor via SMS
+    # Thank donor via SMS
     if donor and donor.get('phone'):
         message = f"Thank you {donor['full_name']}! Your blood donation has been confirmed. You've helped save up to 3 lives! 🩸❤️"
-        send_sms(donor['phone'], message)
+        send_notification_sms(donor['phone'], message)
     
     flash('Donation confirmed! Thank you!', 'success')
     return redirect(url_for('dashboard'))
-
 
 @app.route('/request/<request_id>/cancel', methods=['POST'])
 @login_required
 def cancel_request(request_id):
     """Cancel a blood request."""
-    blood_request = None
-    for req in blood_requests_db:
-        if req['request_id'] == request_id:
-            blood_request = req
-            break
+    if USE_AWS:
+        try:
+            blood_request = get_blood_request(request_id)
+        except Exception as e:
+            logger.error(f"Error fetching request: {e}")
+            blood_request = None
+    else:
+        blood_request = None
+        for req in blood_requests_db:
+            if req['request_id'] == request_id:
+                blood_request = req
+                break
     
     if not blood_request:
         flash('Blood request not found.', 'danger')
@@ -599,25 +750,36 @@ def cancel_request(request_id):
         return redirect(url_for('dashboard'))
     
     blood_request['status'] = 'cancelled'
+    
+    if USE_AWS:
+        try:
+            update_blood_request(blood_request)
+        except Exception as e:
+            logger.error(f"Error updating request: {e}")
+    
     flash('Request cancelled.', 'info')
     return redirect(url_for('dashboard'))
-
 
 @app.route('/all-requests')
 @login_required
 def all_requests():
     """View all blood requests."""
-    all_reqs = []
-    for req in blood_requests_db:
+    if USE_AWS:
+        try:
+            all_reqs = get_all_pending_requests()
+        except Exception as e:
+            logger.error(f"Error fetching requests: {e}")
+            all_reqs = blood_requests_db
+    else:
+        all_reqs = blood_requests_db
+    
+    for req in all_reqs:
         requester = get_user_by_id(req['requester_id'])
-        req_copy = req.copy()
-        req_copy['requester_name'] = requester['full_name'] if requester else 'Unknown'
-        req_copy['requester_phone'] = requester.get('phone', 'N/A') if requester else 'N/A'
-        all_reqs.append(req_copy)
+        req['requester_name'] = requester['full_name'] if requester else 'Unknown'
+        req['requester_phone'] = requester.get('phone', 'N/A') if requester else 'N/A'
     
     all_reqs.sort(key=lambda x: x['created_at'], reverse=True)
     return render_template('all_requests.html', requests=all_reqs)
-
 
 @app.route('/profile')
 @login_required
@@ -635,7 +797,9 @@ def profile():
         requests_count=stats['requests']
     )
 
+# ============================================
 # UNIQUE FEATURES
+# ============================================
 
 @app.route('/realtime-dashboard')
 @login_required
@@ -644,14 +808,12 @@ def realtime_dashboard():
     update_user_activity(session['user_id'])
     return render_template('realtime_dashboard.html')
 
-
 @app.route('/blood-inventory')
 @login_required
 def blood_inventory_view():
     """View blood inventory."""
     inventory = get_realtime_inventory()
     return render_template('blood_inventory.html', inventory=inventory)
-
 
 @app.route('/blood-camps')
 @login_required
@@ -660,7 +822,6 @@ def blood_camps_view():
     user_registrations = camp_registrations.get(session['user_id'], [])
     sorted_camps = sorted(blood_camps, key=lambda x: x['date'])
     return render_template('blood_camps.html', camps=sorted_camps, user_registrations=user_registrations)
-
 
 @app.route('/blood-camps/<camp_id>/register', methods=['POST'])
 @login_required
@@ -693,14 +854,13 @@ def register_for_camp(camp_id):
     user = get_user_by_id(session['user_id'])
     add_activity(session['user_id'], 'camp', f"{user['full_name']} registered for {camp['name']}", '🏕️')
     
-    # TODO [SNS]: Send confirmation SMS
+    # Send confirmation SMS
     if user and user.get('phone'):
         message = f"You're registered for {camp['name']} on {camp['date']}. Location: {camp['location']}. See you there!"
-        send_sms(user['phone'], message)
+        send_notification_sms(user['phone'], message)
     
     flash(f"Registered for {camp['name']}!", 'success')
     return redirect(url_for('blood_camps_view'))
-
 
 @app.route('/sos-emergency', methods=['GET', 'POST'])
 @login_required
@@ -723,18 +883,27 @@ def sos_emergency():
             'created_at': datetime.now().isoformat(),
             'responders': []
         }
-        emergency_alerts.insert(0, alert)
+        
+        if USE_AWS:
+            try:
+                create_emergency_alert(alert)
+                logger.info(f"✅ Emergency alert created in DynamoDB")
+            except Exception as e:
+                logger.error(f"❌ Failed to create alert in DynamoDB: {e}")
+                emergency_alerts.insert(0, alert)
+        else:
+            emergency_alerts.insert(0, alert)
         
         add_activity(session['user_id'], 'sos', f"🆘 SOS ALERT from {user['full_name']}!", '🆘')
         
-        # TODO [SNS]: Broadcast emergency SMS to all compatible donors
+        # Broadcast emergency SMS to all compatible donors
         for donor in users_db:
             if donor['user_id'] != session['user_id']:
                 donor_blood = donor.get('blood_group')
                 if alert['blood_group'] in COMPATIBILITY.get(donor_blood, []):
                     if donor.get('phone'):
                         message = f"🆘 EMERGENCY: {alert['blood_group']} blood needed URGENTLY at {alert['hospital']}! Location: {alert['location']}. Contact: {alert['contact_phone']}. Please help if you can!"
-                        send_sms(donor['phone'], message)
+                        send_notification_sms(donor['phone'], message)
         
         flash('🆘 SOS Alert sent! All compatible donors have been notified via SMS!', 'success')
         return redirect(url_for('emergency_list'))
@@ -742,15 +911,23 @@ def sos_emergency():
     user = get_user_by_id(session['user_id'])
     return render_template('sos_emergency.html', user=user, blood_groups=BLOOD_GROUPS)
 
-
 @app.route('/emergencies')
 @login_required
 def emergency_list():
     """View emergency alerts."""
     user_blood_group = session.get('blood_group')
     
+    if USE_AWS:
+        try:
+            alerts = get_emergency_alerts()
+        except Exception as e:
+            logger.error(f"Error fetching alerts: {e}")
+            alerts = emergency_alerts
+    else:
+        alerts = emergency_alerts
+    
     compatible_alerts = []
-    for alert in emergency_alerts:
+    for alert in alerts:
         if alert['status'] == 'active':
             alert_copy = alert.copy()
             can_help = alert['blood_group'] in COMPATIBILITY.get(user_blood_group, [])
@@ -759,7 +936,6 @@ def emergency_list():
             compatible_alerts.append(alert_copy)
     
     return render_template('emergency_list.html', alerts=compatible_alerts)
-
 
 @app.route('/emergency/<alert_id>/respond', methods=['POST'])
 @login_required
@@ -784,27 +960,43 @@ def respond_to_emergency(alert_id):
         return redirect(url_for('emergency_list'))
     
     alert['responders'].append(session['user_id'])
+    
+    if USE_AWS:
+        try:
+            update_emergency_alert(alert)
+        except Exception as e:
+            logger.error(f"Error updating alert: {e}")
+    
     award_badge(session['user_id'], 'emergency_responder')
     
     donor = get_user_by_id(session['user_id'])
     add_activity(session['user_id'], 'emergency_response', 
                 f"{donor['full_name']} responded to emergency!", '🦸')
     
-    # TODO [SNS]: Notify requester about responder via SMS
+    # Notify requester about responder via SMS
     if alert.get('contact_phone'):
         message = f"🦸 HELP IS COMING! {donor['full_name']} ({donor['blood_group']}) is responding to your emergency. Contact: {donor.get('phone', 'N/A')}"
-        send_sms(alert['contact_phone'], message)
+        send_notification_sms(alert['contact_phone'], message)
     
     flash('Thank you! The requester has been notified via SMS.', 'success')
     return redirect(url_for('emergency_list'))
-
 
 @app.route('/leaderboard')
 @login_required
 def leaderboard():
     """Donor leaderboard."""
     donor_stats = {}
-    for req in blood_requests_db:
+    
+    if USE_AWS:
+        try:
+            requests_list = get_all_pending_requests()
+        except Exception as e:
+            logger.error(f"Error fetching requests: {e}")
+            requests_list = blood_requests_db
+    else:
+        requests_list = blood_requests_db
+    
+    for req in requests_list:
         if req.get('donor_id') and req['status'] == 'donated':
             donor_id = req['donor_id']
             donor_stats[donor_id] = donor_stats.get(donor_id, 0) + 1
@@ -829,8 +1021,9 @@ def leaderboard():
     
     return render_template('leaderboard.html', leaderboard=leaderboard_list[:20])
 
-
+# ============================================
 # API ENDPOINTS (Real-Time Data)
+# ============================================
 
 @app.route('/api/realtime-data')
 def realtime_data():
@@ -838,9 +1031,18 @@ def realtime_data():
     if 'user_id' in session:
         update_user_activity(session['user_id'])
     
-    active_requests = sum(1 for req in blood_requests_db if req['status'] == 'pending')
+    if USE_AWS:
+        try:
+            requests_list = get_all_pending_requests()
+        except Exception as e:
+            logger.error(f"Error fetching requests: {e}")
+            requests_list = blood_requests_db
+    else:
+        requests_list = blood_requests_db
+    
+    active_requests = sum(1 for req in requests_list if req['status'] == 'pending')
     critical_alerts = sum(1 for alert in emergency_alerts if alert['status'] == 'active')
-    donations_today = sum(1 for req in blood_requests_db 
+    donations_today = sum(1 for req in requests_list 
                          if req['status'] == 'donated' and 
                          req.get('donated_at', '')[:10] == datetime.now().strftime('%Y-%m-%d'))
     
@@ -854,7 +1056,7 @@ def realtime_data():
         })
     
     pending_requests = []
-    for req in blood_requests_db:
+    for req in requests_list:
         if req['status'] == 'pending':
             pending_requests.append({
                 'request_id': req['request_id'],
@@ -877,7 +1079,6 @@ def realtime_data():
         'timestamp': datetime.now().isoformat()
     })
 
-
 @app.route('/api/blood-facts')
 def blood_facts():
     """Random blood facts."""
@@ -895,26 +1096,38 @@ def blood_facts():
     ]
     return jsonify({'fact': random.choice(facts)})
 
+# ============================================
 # ERROR HANDLERS
+# ============================================
 
 @app.errorhandler(404)
 def not_found(e):
     return render_template('error.html', error='Page not found', code=404), 404
 
-
 @app.errorhandler(500)
 def server_error(e):
     return render_template('error.html', error='Server error', code=500), 500
 
+# ============================================
 # MAIN
+# ============================================
+
 if __name__ == "__main__":
-    print("\n" + "="*60)
+    # Seed demo data if not using AWS
+    if not USE_AWS:
+        seed_demo_data()
+    
+    mode = "AWS DEPLOYMENT MODE" if USE_AWS else "LOCAL DEVELOPMENT MODE"
+    
+    print("\n" + "="*70)
     print("  🩸 BloodBridge - Blood Bank Management System")
-    print("="*60)
+    print("="*70)
+    print(f"  Mode:    {mode}")
     print("  Status:  RUNNING")
     print("  URL:     http://127.0.0.1:5000")
     print("  Demo:    john@demo.com / demo123")
-    print("="*60)
+    print("="*70)
     print("  Press Ctrl+C to stop the server")
-    print("="*60 + "\n")
+    print("="*70 + "\n")
+    
     app.run(host="127.0.0.1", port=5000, debug=False)

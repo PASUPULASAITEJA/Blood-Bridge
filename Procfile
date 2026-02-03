@@ -1,0 +1,1 @@
+web: gunicorn --bind 0.0.0.0:80 --workers 4 --worker-class sync --timeout 30 --access-logfile - --error-logfile - app_aws_integrated:app
