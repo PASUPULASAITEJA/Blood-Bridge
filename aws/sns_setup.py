@@ -144,7 +144,7 @@ def main():
     print("Creating SNS topics...\n")
     
     # Create topics
-    topics = create_sns_topics(sns)
+    topics =arn:aws:sns:us-east-1:682033489556:topic_arn_sns
     
     # Save topic ARNs to a file for reference
     if topics:
