@@ -26,9 +26,8 @@ requests_table = dynamodb.Table('bloodbridge_requests')
 inventory_table = dynamodb.Table('bloodbridge_inventory')
 
 
-# ============================================
 # USER OPERATIONS
-# ============================================
+
 
 def create_user(user_data):
     """
@@ -132,9 +131,9 @@ def update_user(user_id, updates):
         return False
 
 
-# ============================================
+
 # BLOOD REQUEST OPERATIONS
-# ============================================
+
 
 def create_request(request_data):
     """
@@ -299,10 +298,8 @@ def delete_request(request_id):
     except ClientError:
         return False
 
-
-# ============================================
 # BLOOD INVENTORY OPERATIONS
-# ============================================
+
 
 def get_inventory():
     """
@@ -366,9 +363,8 @@ def update_inventory(blood_type, units_change):
         return False
 
 
-# ============================================
 # UTILITY FUNCTIONS
-# ============================================
+
 
 def get_donation_stats(user_id):
     """

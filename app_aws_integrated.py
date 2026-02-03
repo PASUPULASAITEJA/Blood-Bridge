@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 # AWS SERVICES IMPORT
 USE_AWS = os.getenv("USE_AWS", "false").lower() == "true"
-
 if USE_AWS:
     try:
         from aws.dynamodb_helper import (

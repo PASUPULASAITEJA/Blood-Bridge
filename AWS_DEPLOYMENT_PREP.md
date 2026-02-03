@@ -87,5 +87,4 @@ export AWS_REGION=us-east-1
 3. Configure security groups for EC2
 4. Set up monitoring and logging
 5. Test all features thoroughly
-
 Your BloodBridge project is now fully prepared for AWS deployment!

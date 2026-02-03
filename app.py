@@ -901,7 +901,6 @@ def blood_facts():
 def not_found(e):
     return render_template('error.html', error='Page not found', code=404), 404
 
-
 @app.errorhandler(500)
 def server_error(e):
     return render_template('error.html', error='Server error', code=500), 500

@@ -5,7 +5,6 @@
 Your BloodBridge application has been fully prepared for AWS deployment with DynamoDB and SNS integration.
 
 ---
-
 ## What's Been Implemented ✅
 
 ### 1. **AWS-Integrated Application** (`app_aws_integrated.py`)

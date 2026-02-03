@@ -21,14 +21,13 @@ import boto3
 from botocore.exceptions import ClientError
 from datetime import datetime
 
-# -------------------------------------------------
 # CONFIGURATION
-# -------------------------------------------------
+
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 
-# -------------------------------------------------
+
 # USERS TABLE
-# -------------------------------------------------
+
 def create_users_table(dynamodb):
     """
     Table: bloodbridge_users
@@ -66,9 +65,8 @@ def create_users_table(dynamodb):
         else:
             raise
 
-# -------------------------------------------------
 # REQUESTS TABLE
-# -------------------------------------------------
+
 def create_requests_table(dynamodb):
     """
     Table: bloodbridge_requests
@@ -115,9 +113,9 @@ def create_requests_table(dynamodb):
         else:
             raise
 
-# -------------------------------------------------
+
 # INVENTORY TABLE
-# -------------------------------------------------
+
 def create_inventory_table(dynamodb):
     """
     Table: bloodbridge_inventory
@@ -146,9 +144,9 @@ def create_inventory_table(dynamodb):
         else:
             raise
 
-# -------------------------------------------------
+
 # INVENTORY INITIALIZATION
-# -------------------------------------------------
+
 def initialize_inventory(table):
     """Insert default blood inventory values."""
     default_inventory = {
@@ -169,9 +167,8 @@ def initialize_inventory(table):
 
     print("✅ Blood inventory initialized")
 
-# -------------------------------------------------
 # MAIN
-# -------------------------------------------------
+
 def main():
     print("\n" + "=" * 55)
     print("   BloodBridge – DynamoDB Setup")

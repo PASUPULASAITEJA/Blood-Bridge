@@ -8,7 +8,6 @@ Usage:
 
 Phone numbers should be in E.164 format: +919876543210
 """
-
 import os
 import boto3
 import logging

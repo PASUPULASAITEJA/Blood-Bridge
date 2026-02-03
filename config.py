@@ -137,7 +137,6 @@ CAN_RECEIVE_FROM = {
     'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']  # Universal recipient
 }
 
-
 # BADGE DEFINITIONS
 
 BADGES = {

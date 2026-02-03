@@ -2,7 +2,6 @@
 BloodBridge - SNS Setup Script
 ==============================
 This script creates SNS topics for BloodBridge notifications.
-
 Prerequisites:
 1. AWS CLI configured with credentials
 2. boto3 installed (pip install boto3)
