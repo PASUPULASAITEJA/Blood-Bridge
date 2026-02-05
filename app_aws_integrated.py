@@ -20,13 +20,8 @@ logger = logging.getLogger(__name__)
 USE_AWS = os.getenv("USE_AWS", "false").lower() == "true"
 if USE_AWS:
     try:
-        from aws.dynamodb_helper import (
-            create_user, get_user_by_id, get_user_by_email, get_user_by_phone,
-            create_blood_request, get_blood_request, update_blood_request,
-            get_user_blood_requests, get_all_pending_requests,
-            get_inventory, update_inventory,
-            create_emergency_alert, get_emergency_alerts, update_emergency_alert
-        )
+        import aws.dynamodb_helper as dynamodb_helper
+
         from aws.sns_helper import send_sms, send_emergency_alert
         logger.info("✅ AWS Services initialized (DynamoDB + SNS)")
     except Exception as e:
