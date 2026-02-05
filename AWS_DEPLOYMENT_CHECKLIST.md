@@ -326,5 +326,3 @@ You don't need to migrate data! The application:
 - Flask Docs: https://flask.palletsprojects.com/
 
 ---
-
-**Your BloodBridge application is now AWS-ready! Good luck with your deployment! 🩸❤️**
