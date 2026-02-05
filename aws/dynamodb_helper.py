@@ -1,15 +1,3 @@
-"""
-BloodBridge - DynamoDB Helper Functions
-=======================================
-This module provides helper functions for DynamoDB operations.
-Replace local storage calls with these functions when deploying to AWS.
-
-Usage:
-    from aws.dynamodb_helper import (
-        create_user, get_user_by_email, get_user_by_id,
-        create_request, get_pending_requests, update_request_status
-    )
-"""
 
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
@@ -27,8 +15,6 @@ inventory_table = dynamodb.Table('bloodbridge_inventory')
 
 
 # USER OPERATIONS
-
-
 def create_user(user_data):
     """
     Create a new user in DynamoDB.
