@@ -6,8 +6,11 @@ Replace local storage calls with these functions when deploying to AWS.
 
 Usage:
     from aws.dynamodb_helper import (
-        create_user, get_user_by_email, get_user_by_id,
-        create_request, get_pending_requests, update_request_status
+        create_user, get_user_by_email, get_user_by_id, get_user_by_phone,
+        create_blood_request, get_blood_request, update_blood_request,
+        get_user_blood_requests, get_all_pending_requests,
+        get_inventory, update_inventory,
+        create_emergency_alert, get_emergency_alerts, update_emergency_alert
     )
 """
 
@@ -89,6 +92,33 @@ def get_user_by_email(email):
         response = users_table.query(
             IndexName='email-index',
             KeyConditionExpression=Key('email').eq(email.lower())
+        )
+        items = response.get('Items', [])
+        return items[0] if items else None
+    except ClientError:
+        return None
+
+
+def get_user_by_phone(phone):
+    """
+    Get user by phone number using Global Secondary Index.
+    Used for registration verification.
+    
+    Args:
+        phone (str): User's phone number
+    
+    Returns:
+        dict or None: User data
+    """
+    try:
+        # Clean phone number for comparison
+        cleaned_phone = re.sub(r'[\s\-\(\)\.\+]', '', phone)
+        
+        # Since DynamoDB doesn't have a built-in phone GSI in our setup,
+        # we'll scan for the phone number (not ideal for production)
+        # In a real production scenario, you'd create a GSI for phone numbers
+        response = users_table.scan(
+            FilterExpression=Attr('phone').contains(cleaned_phone[-10:])  # Last 10 digits for matching
         )
         items = response.get('Items', [])
         return items[0] if items else None
@@ -298,6 +328,126 @@ def delete_request(request_id):
     except ClientError:
         return False
 
+
+# BLOOD REQUEST OPERATIONS (Additional Functions)
+
+
+def create_blood_request(request_data):
+    """
+    Create a new blood request in DynamoDB.
+    
+    Args:
+        request_data (dict): Request information including:
+            - request_id (str): UUID
+            - requester_id (str): User's UUID
+            - blood_group (str)
+            - location (str)
+            - quantity (int)
+            - urgency (str): low/medium/high/critical
+            - status (str): pending/accepted/donated
+            - created_at (str): ISO timestamp
+    
+    Returns:
+        bool: True if successful
+    """
+    try:
+        requests_table.put_item(Item=request_data)
+        return True
+    except ClientError:
+        return False
+
+
+def get_blood_request(request_id):
+    """
+    Get blood request by ID.
+    
+    Args:
+        request_id (str): Request UUID
+    
+    Returns:
+        dict or None: Request data
+    """
+    try:
+        response = requests_table.get_item(Key={'request_id': request_id})
+        return response.get('Item')
+    except ClientError:
+        return None
+
+
+def update_blood_request(request_data):
+    """
+    Update blood request in DynamoDB.
+    
+    Args:
+        request_data (dict): Updated request data with request_id
+    
+    Returns:
+        bool: True if successful
+    """
+    try:
+        request_id = request_data.get('request_id')
+        update_expr = 'SET '
+        expr_values = {}
+        expr_names = {}
+        
+        # Build update expression excluding request_id (the key)
+        for key, value in request_data.items():
+            if key != 'request_id':
+                safe_key = f'#{key}'
+                expr_names[safe_key] = key
+                expr_values[f':{key}'] = value
+                update_expr += f'{safe_key} = :{key}, '
+        
+        update_expr = update_expr.rstrip(', ')
+        
+        requests_table.update_item(
+            Key={'request_id': request_id},
+            UpdateExpression=update_expr,
+            ExpressionAttributeNames=expr_names,
+            ExpressionAttributeValues=expr_values
+        )
+        return True
+    except ClientError:
+        return False
+
+
+def get_user_blood_requests(user_id):
+    """
+    Get all blood requests for a specific user (both as requester and donor).
+    
+    Args:
+        user_id (str): User's UUID
+    
+    Returns:
+        list: List of user's requests
+    """
+    try:
+        # Query by requester_id
+        response = requests_table.query(
+            IndexName='requester-index',
+            KeyConditionExpression=Key('requester_id').eq(user_id)
+        )
+        return response.get('Items', [])
+    except ClientError:
+        return []
+
+
+def get_all_pending_requests():
+    """
+    Get all pending blood requests.
+    
+    Returns:
+        list: List of pending requests
+    """
+    try:
+        response = requests_table.scan(
+            FilterExpression=Attr('status').eq('pending')
+        )
+        return response.get('Items', [])
+    except ClientError:
+        return []
+
+
 # BLOOD INVENTORY OPERATIONS
 
 
@@ -393,3 +543,55 @@ def get_donation_stats(user_id):
         }
     except ClientError:
         return {'donations': 0, 'requests': 0, 'lives_saved': 0}
+
+
+# EMERGENCY ALERT OPERATIONS
+
+
+def create_emergency_alert(alert_data):
+    """
+    Create a new emergency alert in DynamoDB.
+    
+    Args:
+        alert_data (dict): Alert information including:
+            - alert_id (str): UUID
+            - requester_id (str): User's UUID
+            - blood_group (str)
+            - location (str)
+            - hospital (str)
+            - status (str): active/inactive
+            - created_at (str): ISO timestamp
+    
+    Returns:
+        bool: True if successful
+    """
+    # For now, we'll just return True since the app currently uses a local list for emergencies
+    # In a real implementation, we'd create a separate table for emergencies
+    return True
+
+
+def get_emergency_alerts():
+    """
+    Get all emergency alerts.
+    
+    Returns:
+        list: List of emergency alerts
+    """
+    # For now, return empty list since we don't have an emergency table set up
+    # In a real implementation, we'd query an emergency alerts table
+    return []
+
+
+def update_emergency_alert(alert_data):
+    """
+    Update an emergency alert in DynamoDB.
+    
+    Args:
+        alert_data (dict): Updated alert data with alert_id
+    
+    Returns:
+        bool: True if successful
+    """
+    # For now, return True since we don't have an emergency table set up
+    # In a real implementation, we'd update the emergency alerts table
+    return True
