@@ -1,13 +1,4 @@
-"""
-BloodBridge - SNS Helper Functions
-===================================
-This module provides helper functions for SMS and email notifications using AWS SNS.
 
-Usage:
-    from aws.sns_helper import send_sms, send_emergency_alert, notify_donors
-
-Phone numbers should be in E.164 format: +919876543210
-"""
 import os
 import boto3
 import logging

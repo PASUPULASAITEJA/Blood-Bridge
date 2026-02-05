@@ -144,7 +144,7 @@ def main():
     print("Creating SNS topics...\n")
     
     # Create topics
-    topics = create_sns_topics(sns)
+    topics =create_sns_topics(sns)
     
     # Save topic ARNs to a file for reference
     if topics:

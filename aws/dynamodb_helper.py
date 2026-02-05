@@ -6,11 +6,8 @@ Replace local storage calls with these functions when deploying to AWS.
 
 Usage:
     from aws.dynamodb_helper import (
-        create_user, get_user_by_email, get_user_by_id, get_user_by_phone,
-        create_blood_request, get_blood_request, update_blood_request,
-        get_user_blood_requests, get_all_pending_requests,
-        get_inventory, update_inventory,
-        create_emergency_alert, get_emergency_alerts, update_emergency_alert
+        create_user, get_user_by_email, get_user_by_id,
+        create_request, get_pending_requests, update_request_status
     )
 """
 
@@ -30,8 +27,6 @@ inventory_table = dynamodb.Table('bloodbridge_inventory')
 
 
 # USER OPERATIONS
-
-
 def create_user(user_data):
     """
     Create a new user in DynamoDB.
