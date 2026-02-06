@@ -408,7 +408,7 @@ def register():
         
         if USE_AWS:
             try:
-                create_user(new_user)
+                dynamodb_helper.create_user(new_user)
                 logger.info(f"✅ User created in DynamoDB: {email}")
             except Exception as e:
                 logger.error(f"❌ Failed to create user in DynamoDB: {e}")
@@ -549,7 +549,7 @@ def create_request():
         
         if USE_AWS:
             try:
-                create_blood_request(new_request)
+                dynamodb_helper.create_request(new_request)
                 logger.info(f"✅ Blood request created in DynamoDB")
             except Exception as e:
                 logger.error(f"❌ Failed to create request in DynamoDB: {e}")
@@ -576,7 +576,7 @@ def respond_to_request(request_id):
     """Respond to a blood request."""
     if USE_AWS:
         try:
-            blood_request = get_blood_request(request_id)
+            blood_request = dynamodb_helper.get_request_by_id(request_id)
         except Exception as e:
             logger.error(f"Error fetching request: {e}")
             blood_request = None
@@ -631,7 +631,7 @@ def confirm_donation(request_id):
     """Confirm donation completed."""
     if USE_AWS:
         try:
-            blood_request = get_blood_request(request_id)
+            blood_request = dynamodb_helper.get_request_by_id(request_id)
         except Exception as e:
             logger.error(f"Error fetching request: {e}")
             blood_request = None
@@ -720,7 +720,7 @@ def cancel_request(request_id):
     """Cancel a blood request."""
     if USE_AWS:
         try:
-            blood_request = get_blood_request(request_id)
+            blood_request = dynamodb_helper.get_request_by_id(request_id)
         except Exception as e:
             logger.error(f"Error fetching request: {e}")
             blood_request = None

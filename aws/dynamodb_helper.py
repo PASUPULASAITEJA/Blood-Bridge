@@ -12,6 +12,7 @@ Usage:
 """
 
 import boto3
+import re
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
 from datetime import datetime
