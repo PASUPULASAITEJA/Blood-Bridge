@@ -155,15 +155,15 @@ def get_local_user_by_phone(phone):
     return None
 
 def get_user_by_id(user_id):
-    """Get user by ID (AWS or local)."""
     if USE_AWS:
         try:
             return dynamodb_helper.get_user_by_id(user_id)
         except Exception as e:
             logger.error(f"Error fetching user from DynamoDB: {e}")
-            return get_local_user_by_id(user_id)
+            return None
     else:
         return get_local_user_by_id(user_id)
+
 
 def get_user_by_email(email):
     """Get user by email (AWS or local)."""
@@ -176,16 +176,17 @@ def get_user_by_email(email):
     else:
         return get_local_user_by_email(email)
 
+
 def get_user_by_phone(phone):
-    """Get user by phone (AWS or local)."""
     if USE_AWS:
         try:
             return dynamodb_helper.get_user_by_phone(phone)
         except Exception as e:
             logger.error(f"Error querying user from DynamoDB: {e}")
-            return get_local_user_by_phone(phone)
+            return None
     else:
         return get_local_user_by_phone(phone)
+
 
 def get_compatible_requests(user_blood_group):
     """Get blood requests that the user can donate to."""
