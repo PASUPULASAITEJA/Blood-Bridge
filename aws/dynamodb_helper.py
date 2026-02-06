@@ -29,22 +29,10 @@ inventory_table = dynamodb.Table('bloodbridge_inventory')
 
 # USER OPERATIONS
 def create_user(user_data):
-    """
-    Create a new user in DynamoDB.
-    
-    Args:
-        user_data (dict): User information including:
-            - user_id (str): UUID
-            - full_name (str)
-            - email (str)
-            - password_hash (str)
-            - blood_group (str)
-            - created_at (str): ISO timestamp
-    
-    Returns:
-        bool: True if successful
-    """
     try:
+        # 🔥 IMPORTANT FIX
+        user_data['email'] = user_data['email'].lower()
+
         users_table.put_item(
             Item=user_data,
             ConditionExpression='attribute_not_exists(user_id)'
@@ -54,6 +42,7 @@ def create_user(user_data):
         if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
             raise ValueError("User already exists")
         raise
+
 
 
 def get_user_by_id(user_id):
@@ -74,25 +63,18 @@ def get_user_by_id(user_id):
 
 
 def get_user_by_email(email):
-    """
-    Get user by email using Global Secondary Index.
-    Used for login authentication.
-    
-    Args:
-        email (str): User's email address
-    
-    Returns:
-        dict or None: User data
-    """
     try:
+        email = email.lower()  # 🔥 FIX
+
         response = users_table.query(
             IndexName='email-index',
-            KeyConditionExpression=Key('email').eq(email.lower())
+            KeyConditionExpression=Key('email').eq(email)
         )
         items = response.get('Items', [])
         return items[0] if items else None
     except ClientError:
         return None
+
 
 
 def get_user_by_phone(phone):
