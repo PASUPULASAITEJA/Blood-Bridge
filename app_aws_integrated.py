@@ -509,7 +509,7 @@ def dashboard():
 
 @app.route('/request/create', methods=['GET', 'POST'])
 @login_required
-def create_request():
+def create_blood_request_view():
     """Create a new blood request."""
     if request.method == 'POST':
         location = request.form.get('location', '').strip()
