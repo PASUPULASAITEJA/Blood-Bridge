@@ -208,7 +208,7 @@ def get_compatible_requests(user_blood_group):
     
     if USE_AWS:
         try:
-            requests = dynamodb_helper.get_pending_requests()
+            requests = get_pending_requests()
         except Exception as e:
             logger.error(f"Error fetching requests from DynamoDB: {e}")
             requests = blood_requests_db
@@ -774,7 +774,7 @@ def all_requests():
     """View all blood requests."""
     if USE_AWS:
         try:
-            all_reqs = dynamodb_helper.get_pending_requests()
+            all_reqs = get_pending_requests()
         except Exception as e:
             logger.error(f"Error fetching requests: {e}")
             all_reqs = blood_requests_db
@@ -997,7 +997,7 @@ def leaderboard():
     
     if USE_AWS:
         try:
-            requests_list = dynamodb_helper.get_pending_requests()
+            requests_list = get_pending_requests()
         except Exception as e:
             logger.error(f"Error fetching requests: {e}")
             requests_list = blood_requests_db
@@ -1041,7 +1041,7 @@ def realtime_data():
     
     if USE_AWS:
         try:
-            requests_list = dynamodb_helper.get_pending_requests()
+            requests_list = get_pending_requests()
         except Exception as e:
             logger.error(f"Error fetching requests: {e}")
             requests_list = blood_requests_db
