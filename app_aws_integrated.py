@@ -563,7 +563,7 @@ def create_request():
         
         if USE_AWS:
             try:
-                dynamodb_helper.create_request(new_request)
+                create_request(new_request)
                 logger.info(f"✅ Blood request created in DynamoDB")
             except Exception as e:
                 logger.error(f"❌ Failed to create request in DynamoDB: {e}")
