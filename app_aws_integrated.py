@@ -21,28 +21,34 @@ USE_AWS = os.getenv("USE_AWS", "false").lower() == "true"
 if USE_AWS:
     try:
         from aws.dynamodb_helper import (
-    create_user,
-    get_user_by_email,
-    get_user_by_id,
-    get_user_by_phone,
-    create_request,
-    get_pending_requests,
-    get_request_by_id,
-    get_user_blood_requests,
-    update_blood_request,
-    update_inventory,
-    get_inventory
-)
+            create_user,
+            get_user_by_email,
+            get_user_by_id,
+            get_user_by_phone,
 
+            # requests
+            create_request,
+            get_request_by_id,
+            get_pending_requests,
+            get_user_blood_requests,
+            update_blood_request,
+
+            # inventory
+            update_inventory,
+            get_inventory,
+
+            # emergencies
+            create_emergency_alert,
+            get_emergency_alerts,
+            update_emergency_alert
+        )
 
         from aws.sns_helper import send_sms, send_emergency_alert
         logger.info("✅ AWS Services initialized (DynamoDB + SNS)")
+
     except Exception as e:
         logger.error(f"❌ Failed to initialize AWS services: {e}")
-        logger.info("Falling back to local storage...")
         USE_AWS = False
-else:
-    logger.info("⚠️  Using LOCAL STORAGE mode (development)")
 
 # LOCAL STORAGE FALLBACK (for development)
 users_db = []
