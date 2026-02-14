@@ -78,20 +78,20 @@
     
     <!-- Main Content Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Matching Blood Requests -->
+        <!-- All Blood Requests from Other Users -->
         <div class="bg-white rounded-xl shadow-md overflow-hidden">
             <div class="bg-red-50 px-6 py-4 border-b border-red-100">
                 <h2 class="text-xl font-bold text-gray-800 flex items-center">
                     <span class="text-2xl mr-2">🩸</span>
-                    Requests You Can Help
+                    Blood Requests from Others
                 </h2>
-                <p class="text-sm text-gray-600 mt-1">Compatible with your blood type ({{ user_blood_group }})</p>
+                <p class="text-sm text-gray-600 mt-1">Your blood type: {{ user_blood_group }} • Green = You can donate</p>
             </div>
             
             <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
                 {% if matching_requests %}
                     {% for req in matching_requests %}
-                    <div class="p-6 hover:bg-gray-50 transition">
+                    <div class="p-6 hover:bg-gray-50 transition {% if req.can_donate %}border-l-4 border-green-500{% else %}border-l-4 border-gray-300{% endif %}">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <div class="flex items-center space-x-2 mb-2">
@@ -105,6 +105,15 @@
                                     <span class="inline-block px-3 py-1 text-sm font-semibold bg-red-600 text-white rounded-full">
                                         {{ req.blood_group }}
                                     </span>
+                                    {% if req.can_donate %}
+                                    <span class="inline-block px-3 py-1 text-sm font-semibold bg-green-100 text-green-800 rounded-full">
+                                        ✓ You can donate
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-block px-3 py-1 text-sm font-semibold bg-gray-100 text-gray-600 rounded-full">
+                                        Not compatible
+                                    </span>
+                                    {% endif %}
                                 </div>
                                 <p class="font-medium text-gray-800">{{ req.requester_name }}</p>
                                 <p class="text-sm text-gray-500 flex items-center mt-1">
@@ -124,11 +133,17 @@
                                 <p class="text-sm text-gray-500 mt-1">{{ req.quantity }} unit(s) needed</p>
                             </div>
                             <div class="flex flex-col gap-2">
+                                {% if req.can_donate %}
                                 <form method="POST" action="{{ url_for('respond_to_request', request_id=req.request_id) }}">
                                     <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition">
                                         Donate
                                     </button>
                                 </form>
+                                {% else %}
+                                <button disabled class="bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm font-semibold cursor-not-allowed">
+                                    Can't Donate
+                                </button>
+                                {% endif %}
                                 {% if req.requester_phone %}
                                 <a href="tel:{{ req.requester_phone }}" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition text-center">
                                     📞 Call
@@ -141,7 +156,7 @@
                 {% else %}
                     <div class="p-8 text-center">
                         <div class="text-5xl mb-4">✅</div>
-                        <p class="text-gray-500">No matching blood requests at the moment.</p>
+                        <p class="text-gray-500">No blood requests from other users at the moment.</p>
                         <p class="text-sm text-gray-400 mt-1">Check back later for donation opportunities.</p>
                     </div>
                 {% endif %}

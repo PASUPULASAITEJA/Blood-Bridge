@@ -135,18 +135,35 @@ def get_user_by_phone(phone):
             return user
     return None
 
-def get_compatible_requests(user_blood_group):
+def get_compatible_requests(user_blood_group, exclude_user_id=None):
     """Get blood requests that the user can donate to."""
     compatible_groups = COMPATIBILITY.get(user_blood_group, [])
     matching_requests = []
     
+    logging.info(f"[DEBUG] Looking for requests compatible with {user_blood_group}")
+    logging.info(f"[DEBUG] Can donate to: {compatible_groups}")
+    logging.info(f"[DEBUG] Total requests in DB: {len(blood_requests_db)}")
+    logging.info(f"[DEBUG] Excluding user: {exclude_user_id}")
+    
     for req in blood_requests_db:
+        logging.info(f"[DEBUG] Checking request: {req['request_id'][:8]}... Blood: {req['blood_group']}, Status: {req['status']}, Requester: {req['requester_id'][:8]}...")
+        
+        # Skip requests made by the current user
+        if exclude_user_id and req['requester_id'] == exclude_user_id:
+            logging.info(f"[DEBUG] -> Skipped (own request)")
+            continue
+            
         if req['blood_group'] in compatible_groups and req['status'] == 'pending':
             requester = get_user_by_id(req['requester_id'])
             req_copy = req.copy()
             req_copy['requester_name'] = requester['full_name'] if requester else 'Unknown'
             req_copy['requester_phone'] = requester.get('phone', 'N/A') if requester else 'N/A'
             matching_requests.append(req_copy)
+            logging.info(f"[DEBUG] -> MATCHED! Added to list")
+        else:
+            logging.info(f"[DEBUG] -> Not compatible or not pending")
+    
+    logging.info(f"[DEBUG] Found {len(matching_requests)} matching requests")
     return matching_requests
 
 def send_notification(recipient, subject, message):
@@ -252,19 +269,69 @@ def seed_demo_data():
         return
 
     demo_users = [
-        {'name': 'John Smith', 'email': 'john@demo.com', 'blood': 'O+', 'password': 'demo123'},
-        {'name': 'Sarah Johnson', 'email': 'sarah@demo.com', 'blood': 'A+', 'password': 'demo123'},
+        {'name': 'John Smith', 'email': 'john@demo.com', 'blood': 'O+', 'password': 'demo123', 'phone': '+91-98765-43210'},
+        {'name': 'Sarah Johnson', 'email': 'sarah@demo.com', 'blood': 'A+', 'password': 'demo123', 'phone': '+91-98765-43211'},
+        {'name': 'Mike Wilson', 'email': 'mike@demo.com', 'blood': 'B+', 'password': 'demo123', 'phone': '+91-98765-43212'},
     ]
 
+    created_users = []
     for user in demo_users:
-        users_db.append({
+        new_user = {
             'user_id': str(uuid.uuid4()),
             'full_name': user['name'],
             'email': user['email'],
+            'phone': user['phone'],
             'password_hash': generate_password_hash(user['password']),
             'blood_group': user['blood'],
             'created_at': datetime.now().isoformat()
+        }
+        users_db.append(new_user)
+        created_users.append(new_user)
+    
+    # Create demo blood requests
+    demo_requests = [
+        {
+            'requester': created_users[0],  # John (O+)
+            'blood_group': 'O+',
+            'location': 'City Hospital, Downtown',
+            'quantity': 2,
+            'urgency': 'high',
+            'notes': 'Needed for surgery tomorrow'
+        },
+        {
+            'requester': created_users[1],  # Sarah (A+)
+            'blood_group': 'A+',
+            'location': 'General Hospital, North Street',
+            'quantity': 1,
+            'urgency': 'medium',
+            'notes': 'Regular transfusion needed'
+        },
+        {
+            'requester': created_users[2],  # Mike (B+)
+            'blood_group': 'B+',
+            'location': 'Emergency Care Center',
+            'quantity': 3,
+            'urgency': 'critical',
+            'notes': 'Accident victim, urgent!'
+        },
+    ]
+    
+    for req_data in demo_requests:
+        blood_requests_db.append({
+            'request_id': str(uuid.uuid4()),
+            'requester_id': req_data['requester']['user_id'],
+            'blood_group': req_data['blood_group'],
+            'location': req_data['location'],
+            'quantity': req_data['quantity'],
+            'urgency': req_data['urgency'],
+            'contact_phone': req_data['requester']['phone'],
+            'notes': req_data['notes'],
+            'status': 'pending',
+            'donor_id': None,
+            'created_at': datetime.now().isoformat()
         })
+    
+    logging.info(f"[SEED] Created {len(created_users)} demo users and {len(demo_requests)} demo requests")
 
 def notify_compatible_donors(blood_group, location, urgency, requester_name):
     """
@@ -390,15 +457,42 @@ def dashboard():
     update_user_activity(session['user_id'])
     user_blood_group = session.get('blood_group')
     
-    matching_requests = get_compatible_requests(user_blood_group)
+    # DEBUG: Print all requests
+    logging.info(f"\n{'='*60}")
+    logging.info(f"[DASHBOARD DEBUG] Current User: {session.get('user_name')} ({session['user_id'][:8]}...)")
+    logging.info(f"[DASHBOARD DEBUG] User Blood Type: {user_blood_group}")
+    logging.info(f"[DASHBOARD DEBUG] Total Requests in Database: {len(blood_requests_db)}")
+    logging.info(f"[DASHBOARD DEBUG] Total Users in Database: {len(users_db)}")
+    
+    for i, req in enumerate(blood_requests_db):
+        requester = get_user_by_id(req['requester_id'])
+        logging.info(f"  Request {i+1}: {req['blood_group']} by {requester['full_name'] if requester else 'Unknown'} - Status: {req['status']}")
+    
+    # Get ALL pending requests from OTHER users (not just compatible ones)
+    all_other_requests = []
+    for req in blood_requests_db:
+        if req['requester_id'] != session['user_id'] and req['status'] == 'pending':
+            requester = get_user_by_id(req['requester_id'])
+            req_copy = req.copy()
+            req_copy['requester_name'] = requester['full_name'] if requester else 'Unknown'
+            req_copy['requester_phone'] = requester.get('phone', 'N/A') if requester else 'N/A'
+            # Check if user can donate to this request
+            req_copy['can_donate'] = req['blood_group'] in COMPATIBILITY.get(user_blood_group, [])
+            all_other_requests.append(req_copy)
+    
+    # Sort by urgency
     urgency_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
-    matching_requests.sort(key=lambda x: urgency_order.get(x['urgency'], 4))
+    all_other_requests.sort(key=lambda x: urgency_order.get(x['urgency'], 4))
     
     my_requests = [req for req in blood_requests_db if req['requester_id'] == session['user_id']]
     my_donations = [req for req in blood_requests_db if req.get('donor_id') == session['user_id']]
     
+    logging.info(f"[DASHBOARD DEBUG] Showing {len(all_other_requests)} requests from other users")
+    logging.info(f"[DASHBOARD DEBUG] My requests: {len(my_requests)}, My donations: {len(my_donations)}")
+    logging.info(f"{'='*60}\n")
+    
     return render_template('dashboard.html',
-        matching_requests=matching_requests,
+        matching_requests=all_other_requests,
         my_requests=my_requests,
         my_donations=my_donations,
         user_blood_group=user_blood_group
@@ -461,6 +555,17 @@ def create_request():
         blood_requests_db.append(new_request)
         
         user = get_user_by_id(session['user_id'])
+        
+        # DEBUG: Print request creation
+        logging.info(f"\n{'='*60}")
+        logging.info(f"[REQUEST CREATED] New request added!")
+        logging.info(f"  Requester: {user['full_name']} ({session['user_id'][:8]}...)")
+        logging.info(f"  Blood Type: {blood_group}")
+        logging.info(f"  Location: {location}")
+        logging.info(f"  Urgency: {urgency}")
+        logging.info(f"  Total Requests Now: {len(blood_requests_db)}")
+        logging.info(f"{'='*60}\n")
+        
         add_activity(session['user_id'], 'request', 
                     f"{user['full_name']} needs {blood_group} blood at {location}", '🩸')
         
@@ -468,6 +573,7 @@ def create_request():
         notify_compatible_donors(blood_group, location, urgency, user['full_name'])
         
         flash('Blood request created successfully! Compatible donors have been notified.', 'success')
+        flash(f'DEBUG: Total requests in database: {len(blood_requests_db)}', 'info')
         return redirect(url_for('dashboard'))
     
     user = get_user_by_id(session['user_id'])
@@ -907,6 +1013,9 @@ def server_error(e):
 
 # MAIN
 if __name__ == "__main__":
+    # Seed demo data for testing
+    seed_demo_data()
+    
     print("\n" + "="*60)
     print("  🩸 BloodBridge - Blood Bank Management System")
     print("="*60)

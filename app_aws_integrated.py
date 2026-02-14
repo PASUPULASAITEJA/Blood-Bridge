@@ -20,16 +20,35 @@ logger = logging.getLogger(__name__)
 USE_AWS = os.getenv("USE_AWS", "false").lower() == "true"
 if USE_AWS:
     try:
-        import aws.dynamodb_helper as dynamodb_helper
+        from aws.dynamodb_helper import (
+            create_user,
+            get_user_by_email,
+            get_user_by_id,
+            get_user_by_phone,
+
+            # requests
+            create_request,
+            get_request_by_id,
+            get_pending_requests,
+            get_user_blood_requests,
+            update_blood_request,
+
+            # inventory
+            update_inventory,
+            get_inventory,
+
+            # emergencies
+            create_emergency_alert,
+            get_emergency_alerts,
+            update_emergency_alert
+        )
 
         from aws.sns_helper import send_sms, send_emergency_alert
         logger.info("✅ AWS Services initialized (DynamoDB + SNS)")
+
     except Exception as e:
         logger.error(f"❌ Failed to initialize AWS services: {e}")
-        logger.info("Falling back to local storage...")
         USE_AWS = False
-else:
-    logger.info("⚠️  Using LOCAL STORAGE mode (development)")
 
 # LOCAL STORAGE FALLBACK (for development)
 users_db = []
@@ -166,12 +185,13 @@ def get_user_by_id(user_id):
 
 
 def get_user_by_email(email):
+    """Get user by email (AWS or local)."""
     if USE_AWS:
         try:
             return dynamodb_helper.get_user_by_email(email)
         except Exception as e:
             logger.error(f"Error querying user from DynamoDB: {e}")
-            return None
+            return get_local_user_by_email(email)
     else:
         return get_local_user_by_email(email)
 
@@ -187,14 +207,14 @@ def get_user_by_phone(phone):
         return get_local_user_by_phone(phone)
 
 
-def get_compatible_requests(user_blood_group):
+def get_compatible_requests(user_blood_group, exclude_user_id=None):
     """Get blood requests that the user can donate to."""
     compatible_groups = COMPATIBILITY.get(user_blood_group, [])
     matching_requests = []
     
     if USE_AWS:
         try:
-            requests = dynamodb_helper.get_pending_requests()
+            requests = get_pending_requests()
         except Exception as e:
             logger.error(f"Error fetching requests from DynamoDB: {e}")
             requests = blood_requests_db
@@ -202,6 +222,10 @@ def get_compatible_requests(user_blood_group):
         requests = blood_requests_db
     
     for req in requests:
+        # Skip requests made by the current user
+        if exclude_user_id and req['requester_id'] == exclude_user_id:
+            continue
+            
         if req['blood_group'] in compatible_groups and req['status'] == 'pending':
             requester = get_user_by_id(req['requester_id'])
             req_copy = req.copy()
@@ -471,7 +495,8 @@ def dashboard():
     update_user_activity(session['user_id'])
     user_blood_group = session.get('blood_group')
     
-    matching_requests = get_compatible_requests(user_blood_group)
+    # Get matching requests, excluding the user's own requests
+    matching_requests = get_compatible_requests(user_blood_group, exclude_user_id=session['user_id'])
     urgency_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
     matching_requests.sort(key=lambda x: urgency_order.get(x['urgency'], 4))
     
@@ -495,7 +520,7 @@ def dashboard():
 
 @app.route('/request/create', methods=['GET', 'POST'])
 @login_required
-def create_request():
+def create_blood_request_view():
     """Create a new blood request."""
     if request.method == 'POST':
         location = request.form.get('location', '').strip()
@@ -549,7 +574,7 @@ def create_request():
         
         if USE_AWS:
             try:
-                dynamodb_helper.create_request(new_request)
+                create_request(new_request)
                 logger.info(f"✅ Blood request created in DynamoDB")
             except Exception as e:
                 logger.error(f"❌ Failed to create request in DynamoDB: {e}")
@@ -576,7 +601,8 @@ def respond_to_request(request_id):
     """Respond to a blood request."""
     if USE_AWS:
         try:
-            blood_request = dynamodb_helper.get_request_by_id(request_id)
+            blood_request = get_request_by_id(request_id)
+
         except Exception as e:
             logger.error(f"Error fetching request: {e}")
             blood_request = None
@@ -631,7 +657,7 @@ def confirm_donation(request_id):
     """Confirm donation completed."""
     if USE_AWS:
         try:
-            blood_request = dynamodb_helper.get_request_by_id(request_id)
+            blood_request = get_request_by_id(request_id)
         except Exception as e:
             logger.error(f"Error fetching request: {e}")
             blood_request = None
@@ -720,7 +746,7 @@ def cancel_request(request_id):
     """Cancel a blood request."""
     if USE_AWS:
         try:
-            blood_request = dynamodb_helper.get_request_by_id(request_id)
+            blood_request = get_request_by_id(request_id)
         except Exception as e:
             logger.error(f"Error fetching request: {e}")
             blood_request = None
@@ -760,7 +786,7 @@ def all_requests():
     """View all blood requests."""
     if USE_AWS:
         try:
-            all_reqs = dynamodb_helper.get_pending_requests()
+            all_reqs = get_pending_requests()
         except Exception as e:
             logger.error(f"Error fetching requests: {e}")
             all_reqs = blood_requests_db
@@ -983,7 +1009,7 @@ def leaderboard():
     
     if USE_AWS:
         try:
-            requests_list = dynamodb_helper.get_pending_requests()
+            requests_list = get_pending_requests()
         except Exception as e:
             logger.error(f"Error fetching requests: {e}")
             requests_list = blood_requests_db
@@ -1027,7 +1053,7 @@ def realtime_data():
     
     if USE_AWS:
         try:
-            requests_list = dynamodb_helper.get_pending_requests()
+            requests_list = get_pending_requests()
         except Exception as e:
             logger.error(f"Error fetching requests: {e}")
             requests_list = blood_requests_db
