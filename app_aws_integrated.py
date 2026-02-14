@@ -16,6 +16,14 @@ app.secret_key = os.getenv("SECRET_KEY", os.urandom(32).hex())
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from aws.dynamodb_helper import (
+    get_user_blood_requests,
+    update_blood_request,
+    get_inventory,
+    get_emergency_alerts
+)
+
+
 # AWS SERVICES IMPORT
 USE_AWS = os.getenv("USE_AWS", "false").lower() == "true"
 if USE_AWS:

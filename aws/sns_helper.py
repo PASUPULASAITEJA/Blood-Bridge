@@ -22,7 +22,6 @@ except Exception as e:
 ALERTS_TOPIC_ARN = os.getenv('SNS_ALERTS_TOPIC', 'arn:aws:sns:us-east-1:954976289015:SNS_ALERTS_TOPIC')
 EMERGENCY_TOPIC_ARN = os.getenv('SNS_EMERGENCY_TOPIC', 'arn:aws:sns:us-east-1:954976289015:SNS_EMERGENCY_TOPIC')
 
-
 def format_phone_e164(phone):
     """
     Format phone number to E.164 format for AWS SNS.
