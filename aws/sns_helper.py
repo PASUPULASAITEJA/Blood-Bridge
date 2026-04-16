@@ -19,8 +19,8 @@ except Exception as e:
     SNS_ENABLED = False
 
 # Topic ARNs (Update these after running sns_setup.py)
-ALERTS_TOPIC_ARN = os.getenv('SNS_ALERTS_TOPIC', 'arn:aws:sns:us-east-1:616421593678:SNS_ALERTS_TOPIC')
-EMERGENCY_TOPIC_ARN = os.getenv('SNS_EMERGENCY_TOPIC', 'arn:aws:sns:us-east-1:616421593678:SNS_EMERGENCY_TOPIC')
+ALERTS_TOPIC_ARN = os.getenv('SNS_ALERTS_TOPIC', 'arn:aws:sns:us-east-1:954976289015:ALERTS_TOPIC_ARN')
+EMERGENCY_TOPIC_ARN = os.getenv('SNS_EMERGENCY_TOPIC', 'arn:aws:sns:us-east-1:954976289015:EMERGENCY_TOPIC_ARN')
 
 def format_phone_e164(phone):
     """
