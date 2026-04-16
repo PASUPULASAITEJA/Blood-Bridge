@@ -215,7 +215,7 @@ def get_user_by_phone(phone):
         return get_local_user_by_phone(phone)
 
 
-<<<<<<< HEAD
+#HEAD
 def get_compatible_requests(user_blood_group, exclude_user_id=None):
 =======
 def get_compatible_requests(user_blood_group):
